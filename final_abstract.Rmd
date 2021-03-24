@@ -1,0 +1,62 @@
+---
+title: "Engaging the average European citizen? How supranational EU actors communicate on Twitter"
+author: "Sina F. Oezdemir & Christian Rauh"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+##Abstract (241 words)
+
+
+Sina F. Oezdemir
+Norwegian University of Science and Technology, Norway
+Christian Rauh
+WZB Berlin Social Science Center, Germany
+
+The European Union faces a veritable legitimacy crisis. The failure of the Constitutional referendum, the Brexit decision, or the rise of Eurosceptic parties highlight a growing public politicisation. Supranational actors are not only at the receiving end of such controversial public debates, however. In principle, they can defend themselves and give account of their political actions to the European citizenry. Reaching beyond nationally fractured public spheres and not being subject to journalistic selection, social media are particularly promising in this regard. To what extent do supranational actors actually use social media to engage citizens directly?
+The paper offers descriptive quantitative text analyses of 1074656 tweets from 117 verified EU Twitter accounts. Building on extant public accountability and communication deficit literatures, we focus on three sets of indicators. First, citizen engagement requires understandability, and we quantify reading ease and word familiarity of EU tweets. Second, engagement requires clarification of political action, and we exploit part-of-speech structures to see whether the tweets clarify who does what. Third, engagement requires responsiveness, and we quantify the amount of two-way communication by the EU accounts utilizing retweets and replies by these accounts.
+These indicators, their variation across different EU institutions, and benchmarks from random tweet samples by national citizen and politician accounts, provides a novel empirical perspective on the quality of direct public EU communication. This renders future research designs on the specific conditions for more or less supranational citizen engagement tangible.
+
+
+#SI CALL
+
+
+Volume 10, Issue 1
+
+##Title: 
+Analyzing Citizen Engagement with European Politics through Social Media
+
+
+##Editor(s): 
+Pieter de Wilde (Norwegian University of Science and Technology, Norway), Astrid Rasch (Norwegian University of Science and Technology, Norway) and Michael Bossetta (Lund University, Sweden)
+
+Submission of Abstracts: 1-15 March 2021
+Submission of Full Papers: 15-31 July 2021
+Publication of the Issue: January/March 2022 
+
+##Information: 
+How and to what extent do citizens engage with European politics through social media? This question stands at the heart of this thematic issue. Where much research on social media and politics has focused on the US and how political parties use social media, this thematic issue focuses on Europe and on citizens. Citizen engagement can be self-driven, for example in bottom-up grassroot campaigns. It can also be a response to (electoral) campaigns by political parties or triggered by news stories.
+Studying citizens' political engagement in Europe via social media has received comparatively little attention so far, because of a set of key challenges facing researchers. Technical challenges include the accurate measurement of citizen engagement. Computational methods have seen rapid development, but struggle to capture nuances, filter out noise and deal with visual material. GDPR imposes strong legal limitations. Ethical challenges compound legal restrictions, as researchers face trade-offs between the public interest, citizens' privacy and the researchers' role in interpreting findings. The European Union adds yet another layer of complexity, opening a transnational dimension to politics and amplifying concerns about national sovereignty. Finally, cultural challenges limit the scope of inquiry many languages and sub-cultures restricts the comparative scope of inquiry.
+This thematic issue thus invites contributors to explicitly address some of the following sub-questions related to the main question above.
+    • Under which conditions do citizens engage in grassroot politics via social media in Europe?
+    • What explains variations in European citizen response to media and political elite entries on social media?
+    • How are European citizens’ offline characteristics related to political behavior on social media?
+    • Is there a transnational dimension to citizen engagement with European politics?
+    • Which challenges do academics researching this topic encounter and how are they overcome?
+
+##Instructions for Authors: 
+Authors interested in submitting a paper for this issue are asked to consult the journal's instructions for authors and submit their abstracts (maximum of 250 words, with a tentative title) through the abstracts system (here). When submitting their abstracts, authors are also asked to confirm that they are aware that Politics and Governance is an open access journal with a publishing fee if the article is accepted for publication after peer-review (corresponding authors affiliated with our institutional members do not incur this fee).
+
+
+##Open Access: 
+The journal has an article publication fee to cover its costs and guarantee that the article can be accessed free of charge by any reader, anywhere in the world, regardless of affiliation. We defend that authors should not have to personally pay this fee and advise them to check with their institutions if funds are available to cover open access publication fees. Institutions can also join Cogitatio's Membership Program at a very affordable rate and enable all affiliated authors to publish without incurring any fees. Further information about the journal's open access charges and institutional members can be found here.
