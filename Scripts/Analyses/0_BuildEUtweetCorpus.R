@@ -218,10 +218,4 @@ corpus$source <- corpus$source %>%
 
 
 # Export corpus ####
-=======
-# Encoding issues
-
-
-# Export ####
->>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
 write_rds(corpus, "./tweetcorpora/EUtweets.RDS")
