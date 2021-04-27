@@ -19,7 +19,7 @@ library(kableExtra) # 1.3.1
 corpus <- read_rds("./tweetcorpora/EUtweets.RDS")
 
 # Sample for testing purposes
-corpus <- corpus %>% sample_n(3000)
+# corpus <- corpus %>% sample_n(3000)
 
 # Keep copy of raw tweet text
 corpus <- corpus %>% mutate(text_raw = text)
@@ -354,14 +354,4 @@ check <- corpus %>% filter(text2 =="" & lang == "en") %>%
   select(text, text2, lang, langlang)
 
 detected.langs <- as.data.frame(table(corpus$langlang, useNA = "ifany"))
-
-
-
-
-
-# Emoji descriptives ####
-hist(corpus$emoji.count)
-# Most frequent emojies - but country flags ... external list of regional indicators followed by each other ...
-
-
 
