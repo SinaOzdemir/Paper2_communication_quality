@@ -1,6 +1,6 @@
 #############################################################
 # Project:  EU Tweet
-# Task:     Extract text-based indicators from EUtweet sample
+# Task:    Clean tweets of EUtweet sample
 # Author:   @ChRauh (26.04.2021)
 #############################################################
 
@@ -11,7 +11,8 @@ library(quanteda) # 2.1.2
 library(sophistication) # 0.70 https://github.com/kbenoit/sophistication
 library(spacyr) # 1.2.1 - requires Python and Spacy environment installed, see package documentation
 library(textcat) # 1.0-7, n-gram based language detection
-# library(cld3) # 1.4.1 - Google's neural network language detection, very bad on abbreviated text, apparently (LESSON!?)
+library(cld2) # 1.2
+library(cld3) # 1.4.1 - Google's neural network language detection, very bad on abbreviated text, apparently (LESSON!?)
 library(kableExtra) # 1.3.1
 
 
@@ -283,12 +284,15 @@ save_kable(comp.out, "./tables/TextCleaningComparison.html")
 
 # Language detection ####
 
-# Twitter language category contains some strange languages ('eu', 'uk'?)
-# This here is a cross-check
+# Twitter language category contains some strange languages ('eu', 'uk'?) - we neeed to cross-check
+# I use the ngram-profile (character level) based detection from textcat()
+# Google'S cld3 hardly worked on such short pieces in my experince
 
-# "Happy Birthday! Bonne anniversaire! Alles Gute zum Geburtstag. Wszystkiego najlepszego z okazji urodzin! feliç aniversari! feliz cumpleaños!",
+# Initial exercise: tweet level
 
-# corpus$language <- textcat(corpus$text) # takes quite some time
+# corpus$language <- textcat(corpus$text) 
+# 
+# # Compare textcat to Twitter indicator
 # lang.matrix <- table(corpus$lang, corpus$language, useNA = "ifany") %>%
 #   as.data.frame.matrix()
 # write_rds(lang.matrix, "./data/LanguageCatMatrix.RDS")
@@ -298,29 +302,57 @@ save_kable(comp.out, "./tables/TextCleaningComparison.html")
 #          textcat.lang = Var2)
 # write_rds(lang.df, "./data/LanguageCatDF.RDS")
 # 
-# text.eng <- lang.df %>% 
-#   filter(textcat.lang == "english" & Freq > 0) %>% 
+# text.eng <- lang.df %>%
+#   filter(textcat.lang == "english" & Freq > 0) %>%
 #   arrange(desc(Freq))
 # 
-# twitter.eng <- lang.df %>% 
-#   filter(twitter.lang == "en" & Freq > 0) %>% 
+# twitter.eng <- lang.df %>%
+#   filter(twitter.lang == "en" & Freq > 0) %>%
 #   arrange(desc(Freq))
 # 
-# discrepancy1 <- corpus %>% 
-#   filter(language == "english" & lang != "en") %>% 
+# discrepancy1 <- corpus %>%
+#   filter(language == "english" & lang != "en") %>%
 #   select(text, lang, language)
 # 
-# discrepancy2 <- corpus %>% 
-#   filter(language != "english" & lang == "en") %>% 
+# discrepancy2 <- corpus %>%
+#   filter(language != "english" & lang == "en") %>%
 #   select(text, lang, language)
 
-# LESSON: It's actually multi-lingual tweets!
+# textcat looks more reliable in the examples but main LESSON:
+# It's actually mostly multi-lingual tweets!
+# We need to mark them and asses their frequency
+# And then extract only the english-parts and/or translate the others
 
-# We need to mark them somehow (check out also cld3::detect_language_multi())
-# And then extract only the english-parts, based on sentence tokenization, language detection, and paste(collapse)
+
+# Language detection: sentence level
+# Tokenize tweets into sentences, detect language along ngram-profile, 
+# Note all languages used in tweet, cut-out the english parts
+
+# Testing
+
+sandbox <- "Happy Birthday! Bonne anniversaire! Alles Gute zum Geburtstag. Wszystkiego najlepszego z okazji urodzin! feliç aniversari! feliz cumpleaños! doğum günün kutlu olsun."
+df <- spacy_tokenize(sandbox, what = "sentence") %>% 
+  data.frame() %>% 
+  rename(sentences = 1)
+df$tc.simple <- textcat(df$sentences)
+df$tc.ecimci <- textcat(df$sentences, p = ECIMCI_profiles) # Larger n-gram sample, no regional dialects, but only 26 languages (see: names(ECIMCI_profiles))
+df$cld2 <- cld2::detect_language(df$sentences) # Google's old model driving Chrome, the best according to different source
+df$cld3 <- cld3::detect_language(df$sentences) # Google's neuronal network model
+
+# Textcat simple to many misclassifications with irrelvant languages
+# Textcat ECMIMCI better, but limited language choice
+# CLD2 most rebuts in quick sample, and honest if no lang detetcted - go for this now
+
+# LESSON: Language detection is a challenge
+
+# In future iterations we may think about an ensemble approach here
+# Possible including external APIs ...
 
 
-corpus$text2 <- "NA" # Target column to store only english text
+# Classify and clean tweet sentences
+
+corpus$tweetlanguage <- cld2::detect_language(corpus$text) # Fallback if lang of individual sentences cannot be detected
+corpus$text.en <- "NA" # Target column to store only english text
 corpus$langlang <- "NA" # Target column to store all detected languages
 
 for (i in 1:nrow(corpus)){
@@ -335,23 +367,80 @@ for (i in 1:nrow(corpus)){
     rename(sentences = 1)
   
   # Language detection
-  df$lang <- textcat(df$sentences)
+  df$lang <- cld2::detect_language(df$sentences)
+  df$lang[is.na(df$lang)] <- corpus$tweetlanguage[i] # Fallback: If language of sentence cannot be detected, use language detected for overall tweet
   
   # Store all detected languages
-  corpus$langlang[i] <- unique(df$lang) %>% paste(collapse = ", ")
+  langs <- unique(df$lang) %>% 
+    as.character() %>% 
+    sort() %>% 
+    paste(collapse = ", ")
+  corpus$langlang[i] <- langs
   
   # Drop non-english sentences
-  df <- df %>% filter(lang == "english" | lang == "scots")
+  df <- df %>% filter(lang == "en") 
   
   # Rebuild and store text
-  corpus$text2[i] <- paste(df$sentences, collapse = " ")
+  en.text <- paste(df$sentences, collapse = " ")
+  corpus$text.en[i] <- en.text
 }
 
+# To do
+# Afrikaans -> NL !
+# Galician GL -> ES?
+# bs, hr
+# xx-Qaai? 
+
+
 # Cross-checks
-sum(corpus$text2 == "")
-table(corpus$lang[corpus$text2 == ""])
-check <- corpus %>% filter(text2 =="" & lang == "en") %>% 
-  select(text, text2, lang, langlang)
+sum(corpus$text.en == "") # Number of tweets without english content
+sum(corpus$text.en == "" & corpus$tweetlanguage == "en", na.rm = T) # Should be empty
+no.eng <- corpus %>%  filter(text.en =="") %>% # Inspect cases w/out english sentences
+  select(text, tweetlanguage, langlang)
 
-detected.langs <- as.data.frame(table(corpus$langlang, useNA = "ifany"))
+# Frequency of detected languages on tweet level
+detected.langs <- as.data.frame(table(corpus$langlang, useNA = "ifany")) 
+detected.langs <- detected.langs %>% arrange(desc(Freq))
 
+# Frequency on language level
+lang.freq <- data.frame(lang = character(0))
+for (i in 1:nrow(corpus)) {
+  languages <- str_split(corpus$langlang[i], ", ") %>% 
+    as.data.frame() %>% 
+    rename(lang = 1)
+  lang.freq <- rbind(lang.freq, languages)
+}
+rm(languages)
+lang.freq <- lang.freq %>% 
+  group_by(lang) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+ggplot(lang.freq, aes(x=count, y=reorder(lang, count))) + 
+  geom_col()+
+  labs(title = "Frequency of detected languages in EUtweet sample",
+       y= "Detected Language\n(Google Compact Language Detector 2 on sentence level)\n",
+       x = "Frequency of language occurence in Tweets")+
+  theme_minimal()
+
+ggsave("./plots/LanguageFrequency.png", width = 16, height = 18, units = "cm")
+  
+# Average number of languages per tweet   
+# which((str_count(corpus$langlang, ",")>2))
+
+corpus$lang.num <- str_count(corpus$langlang, ",") + 1
+
+ggplot(corpus, aes(x=lang.num)) + 
+  geom_histogram() +
+  # coord_flip() +
+  labs(title = "Multilingual Tweets in EUTweet sample",
+       y= "Absolute frequency\n",
+       x = "Number of languages in Tweet\n(Google Compact Language Detector 2\non sentence level)")+
+  theme_minimal()
+
+ggsave("./plots/MultilingualTweetFrequency.png", width = 10, height = 10, units = "cm")
+
+
+
+# Export cleaned corpus ####
+write_rds(corpus, "./tweetcorpora/EUtweets_cleaned.RDS")
