@@ -1,0 +1,77 @@
+---
+title: "Communication quality meeting notes"
+date: "28/04/2021"
+output: html_notebook
+---
+
+# Discussion points:
+
+1.	Data:
+
+    a.	As you may have seen, the datasets have a lot of nested elements and list elements in variables. I have found an efficient way to sort out the             nested ones, list-as-elements will take are still pending.
+    
+2.	Indicators for comprehensibility:
+
+    a.	Syntactic ease-of-read formulae:
+
+Brief look at the existing work (admittedly starting with the wiki page) points out that Fleisch can be very misleading. I am sure it is less         problematic for comparing documents, but it seems like a highly frowned upon in the field. I found this which claims to improve on Fleisch big time. I’ll need to look up if there is an existing implementation, if it proves too difficult, there is always Fleisch to fall back.
+
+    b.	Stylistic indicators: Number of words, average word length in a tweet, commonality of words, verb to noun ratio
+    
+    c.	Twitter specific: hashtags to words ratio, emojis to words ratio
+
+    Basic text based indicators as main IVs, others as controls.
+  
+3)	Indicators of responsiveness-interactivity:
+
+    a.	Average number of replies by account
+    b.	Average number of retweets by account
+    c.	Average number of mentions by account
+    
+  
+4)	Political action:
+
+    a.	This is going to be a little tricky. My initial observation from the content analysis is that the EU accounts do a lot of “information on day-to-day operations”. These usually come as “I attended this meeting”, “had a talk there” etc. So, POS tagging alone may be deceptive there. Let’s see if we can come up with a better way.
+
+    b.	If you are aware of any policy dictionary (besides Haselmeier’s for Austrian elections) we could try to see how many tweets relate to policy first, then look for personal pronoun + verb combos. 
+    
+    Comparative policy agenda project(CAP). hand coded data. Council conclusion
+
+5)	Benchmarks:
+    
+    a.	Between different EU accounts:
+
+      i.	I suspect accounts for more specific purpose units such as agencies will have a significantly less comprehensibility than general purpose ones         such as EP. Although a tweet from the commission once made my research assistant cry because of its complexity…
+
+    b.	EU vs other broad IOs
+
+      i.	Hooghe and Marks has a dataset on authority scope, we can choose a few IOs that are 1 sd around the EU authority scope and compare EU’s communication to them
+      
+      ii. distance from the citizens,
+
+    c.	EU vs National polity
+
+      i.	This is going to be tricky. I spent about a month selecting the 117 verified accounts to represent the EU as a polity. I am not sure what would be the equivalent on national level
+      
+      ii. accounts of the UK government and national executives
+
+    d. Random sample of tweets from the Twitter in general
+
+6)	Paper structure and division of labor.
+
+    Division of labour:
+    
+      - Empirics: 
+      
+          Sina: Get international and random benchmark data, Other twitter information and some,
+          
+          Christian: language detection, readability indicators, get national accounts
+          
+      - Paper structure:
+          - Intro
+          - EU com def (int, ext)
+          - SoMe helps with external causes of deficit
+          - Data and empirics
+          - Predictions
+          - conclusion
+          
