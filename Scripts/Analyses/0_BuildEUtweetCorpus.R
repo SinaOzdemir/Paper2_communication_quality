@@ -2,6 +2,7 @@
 # Project:  EU Tweet
 # Task:     Build joint corpus of EU accounts
 # Author:   @ChRauh (26.04.2021)
+# Debugger: @SinaOzdemir (01.05.2021)
 ##############################################
 
 # Packages
@@ -11,17 +12,19 @@ library(tidyverse)
 # Get indvidual files ####
 
 # Containing tweet text and metadata from individual accounts
-# As harvested by Sina through the academix API
+# As harvested by Sina through the academic API
 
 # NOTE: folter "tweecorpora" is gitignored for space reasons
 # I picked the data from the respective OneDrive folder
 # Adapt when finalising this !!!!
 
-# NOTE: 117 files - correct?
+# NOTE: 117 files - correct? 
+#Yep, 117 accounts because the Council of the EU and European Council merged their twitter accounts
 
-files <- list.files(path = "./tweetcorpora/eutweets_14-03-2021", pattern = "*.RDS")
-files <- paste0("./tweetcorpora/eutweets_14-03-2021/", files) # Add path to filename
+files <- list.files(path = "./tweetcorpora/eutweets_14-03-2021", pattern = "*.RDS",full.names = T)
 
+#files <- paste0("./tweetcorpora/eutweets_14-03-2021/", files) # Add path to filename
+#no need for this
 
 # Joint corpus ####
 # All files should be identically structured
@@ -43,8 +46,21 @@ for (i in 1:length(files)) {
 
 rm(current) # Remove last instance 
 
+#@Sina: here is a faster and cleaner alternative:
+#however, the resulting data is far too large for my laptop to keep it in the memory
+#my preferred method of analysis is to write a function and apply it individually to 
+#each rds. otherwise it takes a long time.
 
-<<<<<<< HEAD
+#########Alternative data reading script#############
+#rdsdataDIR<- paste0(getwd(),"/Data/rds/")
+#rds_list<- list.files(path = rdsdataDIR,pattern = "*.RDS",full.names = T)
+#tweet_corpus <-  lapply(rds_list,readRDS)
+#However, each file needs to be same dimensions, twitter academic API rds files are not
+#I am going to fix it
+#####################################################
+
+
+#<<<<<<< HEAD
 
 # Look at some descriptives ####
 
@@ -61,7 +77,7 @@ vars <- vars %>%
 =======
 # Look at some descriptives ####
 
->>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
+#>>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
 # Accounts
 # 117
 length(unique(corpus$screen_name))
@@ -73,10 +89,11 @@ table(corpus$lang, useNA = "ifany")
 
 # Symbols present?
 # Only three incidences What is measured here?
+#
 table(is.na(corpus$symbols))
 symbols <- corpus %>% filter(!is.na(symbols))
-<<<<<<< HEAD
-=======
+<<<<<<< HEAD# What are these?
+=======#and these?
 # Drop var for now
 corpus$symbols <- NULL
 >>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
