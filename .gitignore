@@ -1,8 +1,1 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-
-# Ignore the folder with the tweet corpora (too large)
-# Need to harmonize this in local instances
-tweetcorpora/
+Data/
