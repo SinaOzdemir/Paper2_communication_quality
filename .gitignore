@@ -1,3 +1,12 @@
+# Ignored filetypes
+.Rproj.user
+.Ruserdata
+.Rhistory
+
+
 # ignore all files in any directory named build
 Data/
-.Rproj.user
+
+
+# Ignore tweetcorpora folder
+tweetcorpora/
