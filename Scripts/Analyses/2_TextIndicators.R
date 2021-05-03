@@ -63,7 +63,7 @@ re$doc_id <- paste0("text",rownames(re))
 
 # Google N-Gram familiarity measures
 # Based on modified function from sophistication package
-fam <- covars_make_baselines_CR(qcorp, baseline_year = 2010) # Choosing the highest possible year for Goggle NGram Data
+fam <- covars_make_baselines_CR(qcorp, baseline_year = 2000) # Choosing the highest possible decade (2000-10) for Goggle NGram Data
 fam$doc_id <- rownames(fam)
 
 
@@ -79,9 +79,9 @@ indicators <- merge(docids[ ,c("doc_id", "status_id")],
   rename(flesch = Flesch)
 
 indicators <- merge(indicators,
-                    fam[, c("doc_id","google_mean_local")], 
+                    fam[, c("doc_id","google_mean_2000")], 
                     by = "doc_id", all.x = T) %>% 
-  rename(familiarity = google_mean_local)
+  rename(familiarity = google_mean_2000)
 
 indicators <- merge(indicators,
                     pos[, c("doc_id","n_namedentities", "n_noun", "n_verb", "n_sentence", "ntoken")],
