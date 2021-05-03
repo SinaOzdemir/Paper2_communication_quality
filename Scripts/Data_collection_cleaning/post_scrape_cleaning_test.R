@@ -70,8 +70,8 @@ ncol_meta_data %>%
 #It is interesting but irrelevant right now.
 #In any case they are very easy to handle.
 
-##Task 2: remove the excess dimensions----
-#add this to readRDS function then we are done:
+##Task - 2: remove the excess dimensions----
+#add this to cleaning function then we are done:
 
 twitter_rds_reader<- function(file_path){
   if(!require(tidyverse)){
@@ -85,7 +85,7 @@ twitter_rds_reader<- function(file_path){
     
   a<- a %>% select(.,-any_of(c("geo","withheld"))) %>% jsonlite::flatten()
   
-  return(b)
+  return(a)
   
   }else{
     a<- a %>% jsonlite::flatten()
@@ -99,23 +99,31 @@ twitter_rds_reader<- function(file_path){
 
 test_data<- twitter_rds_reader(file_path = files[1])
 
-##Task 1 - create unpack entities.referenced tweets and create desired variables:----
-for (i in 1:nrow(test_data)) {
-  if(is.null(test_data$referrenced_tweets[[i]])){
-    test_data$referrenced_tweets[i]<-NA
+##Task 1 - unpack entities.referenced tweets and create desired variables:----
+twitter_data<- test_data
+
+for (i in 1:nrow(twitter_data)) {
+  if(is.null(twitter_data$referenced_tweets[[i]])){
+    twitter_data$referenced_tweets[i]<-NA
   }
   
 }
 
-test_referenced_tweets<- test_data[!is.na(test_data$test_referenced_tweets),]
-
-test_referenced_tweets<- test_referenced_tweets %>%
+twitter_data<- twitter_data[!is.na(twitter_data$referenced_tweets),] %>%
+  select(id,referenced_tweets) %>%
   group_by(id) %>%
-  unnest(cols = c(test_referenced_tweets),names_sep = "_")
+  unnest(cols = c(referenced_tweets),names_sep = "_") %>%
+  right_join(x = .,y=twitter_data, by = "id")
 
-test_data<- test_data %>%
-  select(-test_referenced_tweets) %>%
-  left_join(test_data,test_referenced_tweets, by = "id")
+#create is_retweet, is_quote, is_reply and reply_to_status_id for later calculations
+
+twitter_data <- twitter_data %>% mutate(is_retweet = ifelse(.$referenced_tweets_type == "retweeted",1,0),
+                                        retweet_status_id = ifelse(.$referenced_tweets_type == "retweeted",.$referenced_tweets_id,NA),
+                                        is_reply = ifelse(.$referenced_tweets_type == "replied_to",1,0),
+                                        reply_to_status_id = ifelse(.$referenced_tweets_type == "replied_to",.$referenced_tweets_id,NA),
+                                        is_quote = ifelse(.$referenced_tweets_type == "quoted",1,0),
+                                        quoted_status_id = ifelse(.$referenced_tweets_type =="quoted",.$referenced_tweets_id,NA))
+
 ##Task 2 - create mentioned_screen_name variable:----
 
 a<- test_data %>% select(id, entities.mentions)
@@ -169,21 +177,27 @@ test_data$reply_to_status_id<- ifelse(test_data$ref_type == "replied_to", test_d
 
 ##Task 7 - Putting it all together into a single function:----
 
+# function is intended to work with either with an object in the memory
+# or a local RDS file. To use the function, convert the native JSON file from the API to RDS
 
-
-twitter_rds_reader<- function(file,read = F,save = F){
-  
+twitter_rds_cleaner<- function(file,read = F,save = F, saveDIR = NULL){
+  #if the function will be used with an existing RDS on a local drive,
+  #the function can read it now. User needs to provide full path to the file
   if(isTRUE(read)){
-  twitter_data<- readRDS(file) %>% as_tibble()
+  twitter_data<- readRDS(file)
   }else{
+    #the function assumes that it will be used with an R object in the global env.
+    
     twitter_data <- file
   }
   
-  c_names_a<-colnames(twitter_data)
   
   #make the dimensions even----
+  c_names_a<-colnames(twitter_data)
+  
   if("geo"%in%acolname | "withheld"%in%acolname){
-    
+    #removes the infrequent columns (geo and withheld) from the dataset
+    #to make it competable for bulking
     twitter_data<- twitter_data %>%
       select(.,-any_of(c("geo","withheld"))) %>%
       jsonlite::flatten()
@@ -196,28 +210,24 @@ twitter_rds_reader<- function(file,read = F,save = F){
   #referenced_tweets for retweets, quotes and replies----
   
   for (i in 1:nrow(twitter_data)) {
-    if(is.null(twitter_data$referrenced_tweets[[i]])){
-      twitter_data$referrenced_tweets[i]<-NA
+    if(is.null(twitter_data$referenced_tweets[[i]])){
+      twitter_data$referenced_tweets[i]<-NA
     }
     
   }
   
-  referenced_tweets<- twitter_data[!is.na(twitter_data$referenced_tweets),]
-  
-  referenced_tweets<- referenced_tweets %>%
+  twitter_data<- twitter_data[!is.na(twitter_data$referenced_tweets),] %>%
+    select(id,referenced_tweets) %>%
     group_by(id) %>%
-    unnest(cols = c(referenced_tweets),names_sep = "_")
-  
-  twitter_data<- twitter_data %>%
-    select(-referenced_tweets) %>%
-    left_join(twitter_data,referenced_tweets, by = "id")
+    unnest(cols = c(referenced_tweets),names_sep = "_") %>%
+    right_join(x = .,y=twitter_data, by = "id")
   
   #create is_retweet, is_quote, is_reply and reply_to_status_id for later calculations
   
   twitter_data <- twitter_data %>% mutate(is_retweet = ifelse(.$referenced_tweets_type == "retweeted",1,0),
                                           retweet_status_id = ifelse(.$referenced_tweets_type == "retweeted",.$referenced_tweets_id,NA),
                                           is_reply = ifelse(.$referenced_tweets_type == "replied_to",1,0),
-                                          reply_to_status_id = ifelse(.referenced_tweets_type == "replied_to",.$referenced_tweets_id,NA),
+                                          reply_to_status_id = ifelse(.$referenced_tweets_type == "replied_to",.$referenced_tweets_id,NA),
                                           is_quote = ifelse(.$referenced_tweets_type == "quoted",1,0),
                                           quoted_status_id = ifelse(.$referenced_tweets_type =="quoted",.$referenced_tweets_id,NA))
   
@@ -252,11 +262,47 @@ twitter_rds_reader<- function(file,read = F,save = F){
   
   twitter_data$contains_media <- ifelse(is.na(twitter_data$attachments.media_keys),0,1)
   
+  #save modified rds----
   if(isTRUE(save)){
-    #needs to be refined to fit the users needs
-    saveRDS(twitter_data,file = "twitter_data.RDS")
+    #User needs to provide a save directory if 
+    #modified dataset needs to be saved
+    #!!!!IMPORTANT!!!
+    #The directory should not end with /
+    #otherwise the function will not save properly.
+    user_name<- twitter_data$author_id[1]
+    saveRDS(twitter_data,file = paste0(saveDIR,"/",user_name,".RDS"))
+  }else{
+    return(twitter_data)
   }
+  #finally return the modified dataset.
   
-  return(twitter_data)
 }
 
+
+# Step 3 - Test the function ----------------------------------------------
+#testing is done with dreynders.RDS
+##task 1 - test with a dataset in the memory:
+
+func_test_data<- readRDS(file = file.choose())
+
+func_data<- twitter_rds_cleaner(file = func_test_data)
+
+#function works with an object in memory and returns 32 variables.
+
+##task 2 - test with an rds in harddrive
+
+func_data2<- twitter_rds_cleaner(file = files[11],read = T)
+#function works with an rds in local and returns 32 variables
+
+## task 3 - test read-write with an rds in memory
+dir.create(path = paste0(getwd(),"/Data/test_rds"))
+save_test_DIR<- paste0(getwd(),"/Data/test_rds")
+
+twitter_rds_cleaner(file = files[11],read = T,save = T,saveDIR = save_test_DIR)
+
+func_data3<- readRDS(file.choose())
+
+#save attribute works as well!
+
+
+#function can be used with map, lapply, or a simple for loop
