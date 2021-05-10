@@ -20,18 +20,13 @@ library(tidyverse)
 
 # NOTE: 117 files - correct? 
 #Yep, 117 accounts because the Council of the EU and European Council merged their twitter accounts
-data.path<- paste0(getwd(),"/data/EU/rds_clean/")
 
-files <- list.files(path = data.path, pattern = "*.RDS",full.names = T)
+files <- list.files(path = "./tweetcorpora/eutweets_14-03-2021", pattern = "*.RDS",full.names = T)
+
+#files <- paste0("./tweetcorpora/eutweets_14-03-2021/", files) # Add path to filename
+#no need for this
 
 # Joint corpus ####
-
-# short cut ---------------------------------------------------------------
-
-#get a sample data to select necessary columns
-
-sample_data<-readRDS(data.path[10])
-
 # All files should be identically structured
 
 # Target DF

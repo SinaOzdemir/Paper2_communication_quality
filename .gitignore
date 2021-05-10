@@ -5,7 +5,7 @@
 
 
 # ignore all files in any directory named build
-data/
+Data/
 
 
 # Ignore tweetcorpora folder

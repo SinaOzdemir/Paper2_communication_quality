@@ -14,10 +14,8 @@ library(textcat) # 1.0-7, n-gram based language detection
 library(cld2) # 1.2
 library(cld3) # 1.4.1 - Google's neural network language detection, very bad on abbreviated text, apparently (LESSON!?)
 library(kableExtra) # 1.3.1
-packs<-c("tidyverse","quanteda","sophistication","spacyr","textcat","cld2","cld3","kableExtra")
-library(pacman)
-p_install_gh(package = "https://github.com/kbenoit/sophistication")
-pacman::p_load(char = packs)
+
+
 # EUtweet corpus ####
 corpus <- read_rds("./tweetcorpora/EUtweets.RDS")
 
