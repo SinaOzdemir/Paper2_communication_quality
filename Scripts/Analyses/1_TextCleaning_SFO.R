@@ -3,7 +3,13 @@
 # Task:    Clean tweets of EUtweet sample
 # Author:   @ChRauh (26.04.2021)
 #############################################################
+#comments: I had code for all hashtags, emojis, and mentions
+# I don't know why you wrestled so much :)
+# They are also stored in seperate columns in the new data
+# so the life is infinitely easier :)
+#############################################################
 
+# Setup -------------------------------------------------------------------
 
 # Packages ####
 library(tidyverse) # 1.3.0
@@ -14,21 +20,29 @@ library(textcat) # 1.0-7, n-gram based language detection
 library(cld2) # 1.2
 library(cld3) # 1.4.1 - Google's neural network language detection, very bad on abbreviated text, apparently (LESSON!?)
 library(kableExtra) # 1.3.1
+#sophistication requires seperate installation process:
+library("spacyr")
+spacy_install()
+spacy_initialize()
+devtools::install_github("kbenoit/sophistication")
+
 packs<-c("tidyverse","quanteda","sophistication","spacyr","textcat","cld2","cld3","kableExtra")
 library(pacman)
-p_install_gh(package = "https://github.com/kbenoit/sophistication")
+
 pacman::p_load(char = packs)
+
+
 # EUtweet corpus ####
-corpus <- read_rds("./tweetcorpora/EUtweets.RDS")
+corpus <- readRDS(paste0(getwd(),"/data/corpii/IO_corpus.RDS")) %>% as.data.frame()
 
 # Sample for testing purposes
 # corpus <- corpus %>% sample_n(3000)
 
 # Keep copy of raw tweet text
-corpus <- corpus %>% mutate(text_raw = text)
+corpus <- corpus %>% mutate(text_raw = tweet_text)
 
 # Sandbox of real tweets
-# Random, from corpus$text[sample(1:3000, 1)]
+# Random, from corpus$tweet_text[sample(1:3000, 1)]
 sandbox <- c("I fell asleep hoping to wake up from a bad dream.Europe is full of wonders that no one will bring us back. Preserving with #digitization is important for us &amp; for future generations. Close to the Parisians. With #NotreDame we've lost a piece of our history https://t.co/hQRqMGSsq3 https://t.co/CPLs1DqEcl",
              "\U0001f91d Sharing risk.\n\U0001f30d Maximising impact.\n\nToday we’ve signed 4 new guarantee agreements under the EU External Investment Plan to create more \U0001f4a1 opportunities for people in countries near the EU and in Africa. \n\nRead more ➡️https://t.co/YY3zPWSti4\n\U0001f4c8 #InvestGlobal #EIP https://t.co/HvYWuoVEOC",
              "We call on all countries to bring to justice those responsible for crimes against journalists. #EndImpunity \n\nWe’ll continue to defend freedom of expression and protect those who make use of it to keep us informed. \n\nMy statement with @JosepBorrellF: \nhttps://t.co/8bfPJ5ChsY https://t.co/5MCHSSE8No",
@@ -44,7 +58,7 @@ sandbox <- sandbox %>%
   str_replace_all(fixed("\n"), ". ") %>% 
   str_replace_all(fixed(". . "), ". ")
 
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all(fixed("\n"), ". ") %>% 
   str_replace_all(fixed(". . "), ". ")
 
@@ -54,7 +68,7 @@ sandbox <- sandbox %>%
   str_replace_all("\\s", " ") %>% # all different types of whitespace to regular whitespace
   str_replace_all("( )+", " ") # Multiple whitespaces to one (should be recursive)
 
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("\\s", " ") %>% # all different types of whitespace to regular whitespace
   str_replace_all("( )+", " ") # Multiple whitespaces to one (should be recursive)
 
@@ -67,7 +81,7 @@ sandbox <- sandbox %>%
   str_remove_all("http.*?( |$)") %>% # Anything from 'http' to either a whitespace or the end of the string
   str_replace_all("( )+", " ") # Multiple whitespaces to one (should be recursive)
 
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_remove_all("http.*?( |$)") %>% # Anything from 'http' to either a whitespace or the end of the string
   str_replace_all("( )+", " ") # Multiple whitespaces to one (should be recursive)
 
@@ -76,7 +90,7 @@ corpus$text <- corpus$text %>%
 # HTML encoding issues ####
 
 # Manual extraction of (possible) HTML character references
-# one.doc <- paste(corpus$text, collapse = " ")
+# one.doc <- paste(corpus$tweet_text, collapse = " ")
 # faulty <- str_extract_all(one.doc, "&[a-z0-9].*? ") %>% 
 #   unlist() %>% 
 #   str_trim() %>% 
@@ -92,7 +106,7 @@ sandbox <- sandbox %>% str_replace_all(fixed("&amp;"), " & ") %>%
   str_replace_all(fixed("&lt;"), " < ") %>% 
   str_replace_all("( )+", " ") 
   
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all(fixed("&amp;"), " & ") %>% 
   str_replace_all(fixed("&gt;"), " > ") %>% 
   str_replace_all(fixed("&lt;"), " < ") %>% 
@@ -111,7 +125,10 @@ corpus$text <- corpus$text %>%
 # Dingbats 2700 to 27BF: https://en.wikipedia.org/wiki/Dingbat#Dingbats_Unicode_block
 # Alphanumeric Supplement 1F100 to 1F1FF: https://en.wikipedia.org/wiki/Enclosed_Alphanumeric_Supplement
 # Miscellaneous_Symbols 2600 to 26FF: https://en.wikipedia.org/wiki/Miscellaneous_Symbols
-# More ???  \u2695️️
+# More ???  \u2695️
+
+# Sina: I normally just scrape this (https://unicode.org/emoji/charts/full-emoji-list.html) and use "code" part as
+#dictionary
 
 # Country flags are a tricky business ... https://en.wikipedia.org/wiki/Regional_indicator_symbol
 # Sequences of unicode characters, EU flag is U+1F1EA (=E) U+1F1FA (=U), e.g.
@@ -123,9 +140,17 @@ sandbox <- sandbox %>%
                             " ") %>% 
   str_replace_all("( )+", " ")
 
-corpus$emoji <- str_extract_all(corpus$text, "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]")
-corpus$emoji.count <- str_count(corpus$emoji, ",")+1
-corpus$text <- corpus$text %>% 
+corpus$emoji <- str_extract_all(corpus$tweet_text, "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]")
+
+#Sina: why did you add 1?
+corpus$emoji.count <- str_count(string = corpus$emoji, pattern = ",")+1
+#I get a warning from this code: Warning message:
+#In stri_count_regex(string, pattern, opts_regex = opts(pattern)) :
+#  argument is not an atomic vector; coercing
+#Did you get it as well?
+
+
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]", 
                   " ") %>% 
   str_replace_all("( )+", " ")
@@ -158,7 +183,7 @@ sandbox <- sandbox %>%
   str_replace_all("#", " ") %>% 
   str_replace_all("( )+", " ")
 
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("(#)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7 \\8\\9 \\10\\11\\12") %>% # 5 Camel Cased words in Hashtag
   str_replace_all("(#)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7 \\8\\9\\10") %>% # 4 Camel Cased words in Hashtag
   str_replace_all("(#)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7\\8") %>% # 3 Camel Cased words in Hashtag
@@ -180,7 +205,7 @@ sandbox <- sandbox %>%
   str_replace_all("@", " ") %>% 
   str_replace_all("( )+", " ")
 
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("(@)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7 \\8\\9 \\10\\11\\12") %>% # 5 Camel Cased words in Mention
   str_replace_all("(@)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7 \\8\\9\\10") %>% # 4 Camel Cased words in Mention
   str_replace_all("(@)([A-Z])([a-z]+?)([A-Z])([a-z]+?)([A-Z])([a-z]+?)( )", "\\1\\2\\3 \\4\\5 \\6\\7\\8") %>% # 3 Camel Cased words in Mention
@@ -195,13 +220,13 @@ corpus$text <- corpus$text %>%
 # The fanciest whitespace you have never seen
 sandbox <- sandbox %>% 
   str_remove_all(" ️")# Not even matched by /s
-corpus$text <-corpus$text %>% 
+corpus$tweet_text <-corpus$tweet_text %>% 
   str_remove_all(" ️")# Not even matched by /s
 
 # Reduce multiple whitespaces again (you never know)
 sandbox <- sandbox %>% 
   str_replace_all("( )+", " ")
-corpus$text <- corpus$text %>% 
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("( )+", " ")
 
 # Offset punctuation
@@ -211,7 +236,8 @@ sandbox <- sandbox %>%
   str_replace_all(fixed(". . "), ". ") %>% 
   str_replace_all(fixed(".. "), ". ") %>% 
   str_replace_all(fixed(" . "), ". ")
-corpus$text <- corpus$text %>% 
+
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all(fixed(" . "), ". ") %>% 
   str_replace_all(fixed(" . "), ". ") %>% 
   str_replace_all(fixed(". . "), ". ") %>% 
@@ -221,7 +247,8 @@ corpus$text <- corpus$text %>%
 # Dots not followed by whitespace
 sandbox <- sandbox %>% 
   str_replace_all("(\\.)([A-Z])", "\\1 \\2")
-corpus$text <- corpus$text %>% 
+
+corpus$tweet_text <- corpus$tweet_text %>% 
    str_replace_all("(\\.)([A-Z])", "\\1 \\2")
 
 # Doubled punctuation
@@ -229,7 +256,8 @@ sandbox <- sandbox %>%
   str_replace_all("(\\.|\\?|!)(\\.)", "\\1 ") %>% 
   str_replace_all("(\\.|\\?|!)([ ]{0,2})(\\.)", "\\1 ") %>% 
   str_squish()
-corpus$text <- corpus$text %>% 
+
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("(\\.|\\?|!)(\\.)", "\\1 ") %>% 
   str_replace_all("(\\.|\\?|!)([ ]{0,2})(\\.)", "\\1 ") %>% 
   str_squish()
@@ -237,14 +265,16 @@ corpus$text <- corpus$text %>%
 # remove Whitespace left and right
 sandbox <- sandbox %>% 
   str_trim(side = "both")
-corpus$text <- corpus$text %>% 
+
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_trim(side = "both")
 
 # Colon at end of string (removed links...)
 sandbox <- sandbox %>% 
   str_trim(side="both") %>% 
   str_remove_all(":$")
-corpus$text <- corpus$text  %>% 
+
+corpus$tweet_text <- corpus$tweet_text  %>% 
   str_trim(side="both") %>% 
   str_remove_all(":$")
 
@@ -253,13 +283,14 @@ sandbox <- sandbox %>%
   str_trim(side = "both") %>% 
   paste0(".") %>% 
   str_replace("(\\.|\\?|!)(\\.)", "\\1 ")
-corpus$text <- corpus$text %>% 
+
+corpus$tweet_text <- corpus$tweet_text %>% 
   str_trim(side = "both") %>% 
   paste0(".") %>% 
   str_replace("(\\.|\\?|!)(\\.)", "\\1 ")
 
 # Inspect random tweet text
-corpus$text[sample(nrow(corpus), 1)]
+a<-corpus$tweet_text[sample(nrow(corpus), 1)]
 
 
 
@@ -285,6 +316,10 @@ save_kable(comp.out, "./tables/TextCleaningComparison.html")
   
 
 # Language detection ####
+### UNLESS THIS IS ABSOLUTELY NECESSARY, I AM SKIPPING THIS PART. IT TAKES OVER 10 HOURS###
+
+
+
 
 # Twitter language category contains some strange languages ('eu', 'uk'?) - we neeed to cross-check
 # I use the ngram-profile (character level) based detection from textcat()
@@ -292,7 +327,7 @@ save_kable(comp.out, "./tables/TextCleaningComparison.html")
 
 # Initial exercise: tweet level
 
-# corpus$language <- textcat(corpus$text) 
+# corpus$language <- textcat(corpus$tweet_text) 
 # 
 # # Compare textcat to Twitter indicator
 # lang.matrix <- table(corpus$lang, corpus$language, useNA = "ifany") %>%
@@ -352,9 +387,9 @@ df$cld3 <- cld3::detect_language(df$sentences) # Google's neuronal network model
 
 
 # Classify and clean tweet sentences
-
-corpus$tweetlanguage <- cld2::detect_language(corpus$text) # Fallback if lang of individual sentences cannot be detected
-corpus$text.en <- "NA" # Target column to store only english text
+#with more than 1 million tweets this takes some time
+corpus$tweetlanguage <- cld2::detect_language(corpus$tweet_text) # Fallback if lang of individual sentences cannot be detected
+corpus$tweet_text.en <- "NA" # Target column to store only english text
 corpus$langlang <- "NA" # Target column to store all detected languages
 
 for (i in 1:nrow(corpus)){
@@ -364,7 +399,7 @@ for (i in 1:nrow(corpus)){
   print(round((i/nrow(corpus))*100, 2))
   
   # Sentence tokenizer
-  df <- spacy_tokenize(corpus$text[i], what = "sentence") %>% 
+  df <- spacy_tokenize(corpus$tweet_text[i], what = "sentence") %>% 
     data.frame() %>% 
     rename(sentences = 1)
   
@@ -384,7 +419,7 @@ for (i in 1:nrow(corpus)){
   
   # Rebuild and store text
   en.text <- paste(df$sentences, collapse = " ")
-  corpus$text.en[i] <- en.text
+  corpus$tweet_text.en[i] <- en.text
 }
 
 # To do
@@ -393,12 +428,11 @@ for (i in 1:nrow(corpus)){
 # bs, hr
 # xx-Qaai? 
 
-
 # Cross-checks
-sum(corpus$text.en == "") # Number of tweets without english content
-sum(corpus$text.en == "" & corpus$tweetlanguage == "en", na.rm = T) # Should be empty
-no.eng <- corpus %>%  filter(text.en =="") %>% # Inspect cases w/out english sentences
-  select(text, tweetlanguage, langlang)
+sum(corpus$tweet_text.en == "") # Number of tweets without english content
+sum(corpus$tweet_text.en == "" & corpus$tweetlanguage == "en", na.rm = T) # Should be empty
+no.eng <- corpus %>%  filter(tweet_text.en =="") %>% # Inspect cases w/out english sentences
+  select(tweet_text, tweetlanguage, langlang)
 
 # Frequency of detected languages on tweet level
 detected.langs <- as.data.frame(table(corpus$langlang, useNA = "ifany")) 
@@ -445,4 +479,4 @@ ggsave("./plots/MultilingualTweetFrequency.png", width = 10, height = 10, units 
 
 
 # Export cleaned corpus ####
-write_rds(corpus, "./tweetcorpora/EUtweets_cleaned.RDS")
+saveRDS(corpus, paste0(getwd(),"/data/corpii/IO_corpus_cleaned.RDS"))
