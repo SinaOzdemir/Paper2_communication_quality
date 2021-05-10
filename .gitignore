@@ -2,10 +2,10 @@
 .Rproj.user
 .Ruserdata
 .Rhistory
-
+.RData
 
 # ignore all files in any directory named build
-Data/
+data/
 
 
 # Ignore tweetcorpora folder
