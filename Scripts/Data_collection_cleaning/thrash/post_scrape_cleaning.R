@@ -21,11 +21,16 @@
 
 # setup -------------------------------------------------------------------
 library(pacman)
+
 packs<- c("tidyverse","jsonlite","plyr")
 #I haven't updated my packages in a while,if you have these packages and they are up to date, ignore install = T, update = T
-pacman::p_load(char = packs,install = T,update = T,character.only = T)
+
+lapply(packs, library,character.only = T)
+
 rdsdataDIR<- paste0(getwd(),"/Data/rds/")
+
 files<- list.files(path = rdsdataDIR,pattern = ".RDS",full.names = T)
+
 if(dir.exists(paste0(getwd(),"/Data/cleaned_rds"))){
   clean_rds_saveDIR<-paste0(getwd(),"/Data/cleaned_rds")
 }else{
@@ -33,7 +38,9 @@ if(dir.exists(paste0(getwd(),"/Data/cleaned_rds"))){
   clean_rds_saveDIR<-paste0(getwd(),"/Data/cleaned_rds")
 }
 
-twitter_rds_cleaner<- function(file,read = F,save = F, saveDIR = NULL){
+important_variables<- readRDS(paste0(getwd(),"/dictionaries/analysis_variables.RDS"))
+
+twitter_rds_cleaner<- function(file,read = F,save = F, saveDIR = NULL,vars_to_keep){
   #if the function will be used with an existing RDS on a local drive,
   #the function can read it now. User needs to provide full path to the file
   if(isTRUE(read)){
@@ -46,20 +53,7 @@ twitter_rds_cleaner<- function(file,read = F,save = F, saveDIR = NULL){
   
   
   #make the dimensions even----
-  c_names_a<-colnames(twitter_data)
-  
-  if("geo"%in%acolname | "withheld"%in%acolname){
-    #removes the infrequent columns (geo and withheld) from the dataset
-    #to make it competable for bulking
-    twitter_data<- twitter_data %>%
-      select(.,-any_of(c("geo","withheld"))) %>%
-      jsonlite::flatten()
-    
-  }else{
-    twitter_data<- twitter_data %>% jsonlite::flatten()
-    
-  }
-  
+  twitter_data<- twitter_data %>% jsonlite::flatten() %>% select(all_of(vars_to_keep))
   #referenced_tweets for retweets, quotes and replies----
   
   for (i in 1:nrow(twitter_data)) {
@@ -132,6 +126,6 @@ twitter_rds_cleaner<- function(file,read = F,save = F, saveDIR = NULL){
 }
 
 for (i in 1:length(files)) {
-
-  twitter_rds_cleaner(file = files[i],read = T,save = T,saveDIR = clean_rds_saveDIR)  
+  print(i)
+  twitter_rds_cleaner(file = files[i],read = T,save = T,saveDIR = clean_rds_saveDIR,vars_to_keep = important_variables)  
 }

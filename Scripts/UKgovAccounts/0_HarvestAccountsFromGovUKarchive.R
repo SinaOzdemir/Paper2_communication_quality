@@ -1,7 +1,7 @@
 #################################################################
 # Project:  EU Tweet
 # Task:     Identify archival documents that may contain UK gov
-#           Twitetr accounts
+#           Twitter accounts
 # Authors:  Christian Rauh (30.04.2021)
 ################################################################
 
