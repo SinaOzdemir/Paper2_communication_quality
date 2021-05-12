@@ -30,7 +30,7 @@ source("./Scripts/Analyses/X_covars_make_baselines_CR.R")
 
 
 # Corpus ####
-corpus <- read_rds("./data/corpii/EUcorpus_cleaned.RDS")
+corpus <- read_rds("./data/corpii/IO_corpus_cleaned.RDS")
 
 
 # Sample for testing purposes
@@ -41,11 +41,11 @@ corpus <- read_rds("./data/corpii/EUcorpus_cleaned.RDS")
 # status_id should be unique identifier for mergin later
 df <- corpus %>% select(tweet_id, tweet_text.en)
 
-
 # Quanteda corpus object
-qcorp <- quanteda::corpus(df$tweet_text.en, docvars = data.frame(corpus[, "tweet_id"]))
+qcorp <- quanteda::corpus(df$tweet_text.en, docvars = data.frame(corpus[,"tweet_id"]))
 #is this supposed to produce an empty named list?
-docids <- docvars(qcorp) %>% # Keep quanteda ids for merging later
+
+docids <- docvars(qcorp) %>%# Keep quanteda ids for merging later
   mutate(doc_id = as.character(docid(qcorp)))
 
 
@@ -80,21 +80,23 @@ pos <- covars_make_pos(qcorp)
 #over an hour and still counting.
 
 # Combine data
-indicators <- merge(docids[ ,c("doc_id", "status_id")],
+indicators <- merge(docids[ ,c("doc_id", "tweet_id")],
                     re[, c("doc_id", "meanSentenceLength", "Flesch")],
                     by = "doc_id", all.x = T) %>% 
   rename(flesch = Flesch)
 
-indicators <- merge(indicators,
-                    fam[, c("doc_id","google_mean_local")], 
-                    by = "doc_id", all.x = T) %>% 
-  rename(familiarity = google_mean_local)
+#what is google_mean_local? Need to figure this out.#there is a better way of doing it
+#there was a problem with colnames in the old code
+indicators_a <- fam %>%
+  select(doc_id,dplyr::matches("google_mean_*")) %>%
+  right_join(.,y = indicators, by = "doc_id") %>% #keeps all the rows in the right hand side
+  rename(familiarity = google_mean_2000)
 
 indicators <- merge(indicators,
                     pos[, c("doc_id","n_namedentities", "n_noun", "n_verb", "n_sentence", "ntoken")],
                     by = "doc_id", all.x = T)
 
-df <- merge(df, indicators, by = "status_id", all.x = T) %>% 
+df <- merge(df, indicators, by = "tweet_id", all.x = T) %>% 
   mutate(nominal = n_noun/n_verb,
          verbal = n_verb/n_noun) %>% 
   select(-doc_id)
@@ -107,4 +109,5 @@ Sys.time()-start
 
 
 # Export ####
-write_rds(df, "./data/EUTweetLanguageIndicators.RDS")
+
+saveRDS(df, "./data/corpii/IOTweetLanguageIndicators.RDS")
