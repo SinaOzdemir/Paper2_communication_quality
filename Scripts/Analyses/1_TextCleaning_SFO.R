@@ -220,12 +220,14 @@ corpus$tweet_text <- corpus$tweet_text %>%
 # The fanciest whitespace you have never seen
 sandbox <- sandbox %>% 
   str_remove_all(" ️")# Not even matched by /s
+
 corpus$tweet_text <-corpus$tweet_text %>% 
   str_remove_all(" ️")# Not even matched by /s
 
 # Reduce multiple whitespaces again (you never know)
 sandbox <- sandbox %>% 
   str_replace_all("( )+", " ")
+
 corpus$tweet_text <- corpus$tweet_text %>% 
   str_replace_all("( )+", " ")
 
@@ -430,7 +432,7 @@ for (i in 1:nrow(corpus)){
 
 # Cross-checks
 sum(corpus$tweet_text.en == "") # Number of tweets without english content
-sum(corpus$tweet_text.en == "" & corpus$tweetlanguage == "en", na.rm = T) # Should be empty
+sum(corpus$tweet_text.en == "" & corpus$tweetlanguage == "en", na.rm = T) # Should be empty, there are 2 tweets
 no.eng <- corpus %>%  filter(tweet_text.en =="") %>% # Inspect cases w/out english sentences
   select(tweet_text, tweetlanguage, langlang)
 
