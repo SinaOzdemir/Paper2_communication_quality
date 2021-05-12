@@ -1,5 +1,5 @@
 #data scraper (to be used wih academic twitter access v2.0)
-
+##UK accounts need to be refined and validated
 devtools::install_github("cjbarrie/academictwitteR")
 
 library(academictwitteR)
@@ -49,8 +49,9 @@ uk_accounts_valid<- uk_prof_info %>% filter(verified == T & protected == F)
 #first scrape tweets:
 
 accounts<- uk_accounts_valid$screen_name
+accounts<- accounts[which(grepl(pattern = "jp_British|JoannaCrellin",x = accounts))]
 
-for (i in 219:length(accounts)) {
+for (i in 1:length(accounts)) {
   #get_creation_date
   creation_date<- uk_accounts_valid %>%
     filter(screen_name == accounts[i]) %>%
@@ -268,8 +269,12 @@ twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,save
 }
 
 #run the function on all data
+if(dir.exists(paste0(getwd(),"/data/UK/rds_clean"))){
+clean_rds_path<- paste0(getwd(),"/data/UK/rds_clean")}else{
+  dir.create(paste0(getwd(),"/data/UK/rds_clean"))
+  clean_rds_path<- paste0(getwd(),"/data/UK/rds_clean")
+}
 
-clean_rds_path<- paste0(getwd(),"/data/UK/rds_clean")
 for (i in 1:length(rds.files)){
   twitter_rds_cleaner(file = rds.files[i],
                       read = T,
