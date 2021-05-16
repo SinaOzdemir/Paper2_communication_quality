@@ -37,7 +37,7 @@ table(uk_prof_info$protected,uk_prof_info$verified,dnn = c("protected","verified
 #and 286 verified accounts...
 
 uk_accounts_valid<- uk_prof_info %>% filter(verified == T & protected == F)
-
+saveRDS(uk_accounts_valid,file = paste0(data_path,"/Accounts/UK_accounts_unverified.RDS"))
 #accounts also seems all over the place. The dataset includes twitter accounts of 
 #ambassadors, government departments, MPs , government members, embassies, local agencies,
 #various government branches (ministry of defence) and sub-departments of ministries (Defence Infrastructure Organisation)
