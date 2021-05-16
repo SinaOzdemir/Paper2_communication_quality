@@ -4,6 +4,8 @@
 
 library(tidyverse)
 library(Hmisc)
+library(academictwitteR)
+library(igraph)
 data.path<-paste0(getwd(),"/data/corpii")
 graph.path<- paste0(getwd(),"/plots/")
 data.eu<-readRDS(file = paste0(data.path,"/EUcorpus_cleaned.RDS"))
@@ -91,3 +93,26 @@ ggsave(filename = "inter_account_quote.jpeg",plot = eu_intr_quote_p,path = graph
 
 
 #would be great to look at who they reply, retweet and quote with a weighted network graph.
+
+
+# network graph of replies ------------------------------------------------
+#reply_to_user_id is missing in the clean data.
+#lets quickly add it
+
+eu.data.path<- "C:/Users/sinaf/OneDrive - NTNU/Projects/communication_quality_repo/data/EU/rds/"
+eu.data.list<- list.files(path = eu.data.path, pattern = "*.RDS",full.names = T)
+eu.reply.network<- map_dfr(eu.data.list, readRDS) %>% select(author_id,tweet_in_reply_to_user_id)
+eu.edge.list<- eu.reply.network %>%
+  group_by(author_id,tweet_in_reply_to_user_id) %>%
+  summarise(weight = n()) %>%
+  drop_na(tweet_in_reply_to_user_id) %>%
+  arrange(desc(weight)) %>% rename(from = author_id , to =  tweet_in_reply_to_user_id)
+
+eu.node.list<- eu.edge.list %>%
+  pivot_longer(cols = c("from","to"),names_to = "variable", values_to = "labels") %>%
+  select(labels) %>%
+  distinct(labels)
+
+network.dta<-graph_from_data_frame(d = eu.edge.list,vertices = eu.node.list,directed = T)
+#this look attrocious. There are some good visualization ideas here https://www.jessesadler.com/post/network-analysis-with-r/?fbclid=IwAR3O0zFbSF0V0UjMXVhQASJy4ft_7InhMtfArPK3AOuylNOUL-noQmV8y5g
+plot(network.dta)
