@@ -5,7 +5,7 @@
 
 library(pacman)
 packs<- c("tidyverse","rtweet","rvest")
-pacman::p_load(char = packs,update = T)
+pacman::p_load(char = packs,update = F)
 data.path<- paste0(getwd(),"/data/")
 
 v_1_token<-rtweet::create_token(app = "Functionised_collector",
@@ -15,7 +15,7 @@ v_1_token<-rtweet::create_token(app = "Functionised_collector",
                                 access_secret = "96TaBIVuZXlpICK2QAP7IurCFuYPfHSUbXYUTTSRak3gr",
                                 set_renv = F)
 
-google_maps_api_key <- "AIzaSyCsz6qXAbWh6eglXkq91vebo1NRGY2xaS4"
+#google_maps_api_key <- "AIzaSyCsz6qXAbWh6eglXkq91vebo1NRGY2xaS4"
 
 # get the list of EU countries --------------------------------------------
 library(countrycode)
@@ -67,7 +67,7 @@ aust_random_tweets %>%
 
 #actual streaming
 #stream data with 5 min time-windows for 24 hours
-starting_time<- Sys.time()
+starting_time<- "2021-05-13 11:53:20 CEST"
 
 repeat{
 
