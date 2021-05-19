@@ -3,10 +3,7 @@
 .Ruserdata
 .Rhistory
 .RData
-
 # ignore all files in any directory named build
 data/
-
-
 # Ignore tweetcorpora folder
 tweetcorpora/
