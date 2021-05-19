@@ -1,60 +1,193 @@
-##############################################
+#####################################################################
 # Project:  EU Tweet
-# Task:     Build joint corpus of EU accounts
-# Author:   @ChRauh (26.04.2021)
-# Debugger: @SinaOzdemir (01.05.2021)
-##############################################
+# Task:     Build joint corpora of scraped Twitter account timelines
+# Authors:   @ChRauh, @SinaOzdemir (18.05.2021)
+#####################################################################
 
 # Packages
 library(tidyverse)
+library(lubridate) 
+library(Hmisc)
 
 
-# Get indvidual files ####
+# Corpus construction function ####
 
-# Containing tweet text and metadata from individual accounts
-# As harvested by Sina through the academic API
+# Tweets and meta harvested through the academic track API 
+# are in one file per account, one folder by ype of actor / tweet sample - currently [EU|UK|IO|TWT]
 
-# NOTE: folter "tweecorpora" is gitignored for space reasons
-# I picked the data from the respective OneDrive folder
-# Adapt when finalising this !!!!
+# Function appends and mildly cleans all files within one of those folders
 
-# NOTE: 117 files - correct? 
-#Yep, 117 accounts because the Council of the EU and European Council merged their twitter accounts
-data.path<- paste0(getwd(),"/data/EU/rds_clean/")
-
-files <- list.files(path = data.path, pattern = "*.RDS",full.names = T)
-
-# Joint corpus ####
-
-# short cut ---------------------------------------------------------------
-
-#get a sample data to select necessary columns
-
-sample_data<-readRDS(data.path[10])
-
-# All files should be identically structured
-
-# Target DF
-corpus <- data.frame()
-
-for (i in 1:length(files)) {
+buildTweetCorpus <- function(actor.type = character(0)) {
   
-  # Progress
-  print(i)
+  # Establish path to data folder
+  # Relative path to EUtweet toot folder
+  data.path<- paste0("./data/", actor.type , "/rds_clean/")
   
-  # Read file
-  current <- read_rds(files[i])
+  # List individual files therein 
+  files <- list.files(path = data.path, pattern = "*.RDS", full.names = T,
+                      recursive = T, include.dirs = T) # Include sub folders
   
-  # Appended to target DF
-  corpus <- rbind(corpus, current)
+  # Target DF
+  corpus <- data.frame()
+  
+  # Load individual files and append to corpus
+  for (i in 1:length(files)) {
+    
+    # Progress
+    print(paste0("Load/append file ", i, " of ", length(files)))
+    
+    # Read file
+    current <- read_rds(files[i])
+    
+    # Should column structure be partially inconsitent across files
+    # add explciti dplyr::select() call here
+    
+    # Append to target DF
+    corpus <- rbind(corpus, current)
+  }
+  
+  # Remove last instance 
+  rm(current) 
+  
+  # Some cleaning
+  print("Cleaning appended data frame")
+  
+  # Variable/column structure
+  corpus <- corpus %>% 
+    rename(screen_name = user_username,
+           userid = author_id, 
+           timestamp = tweet_created_at,
+           sensitive = tweet_possibly_sensitive) %>% 
+    select(!starts_with("user_")) %>% # Drop all remaining static user info
+    select(-tweet_referenced_tweets) %>% # basically replicates referenced_tweets_id
+    relocate(screen_name, userid, tweet_id, timestamp, tweet_text, starts_with("is_"))
+  
+  names(corpus) <- names(corpus) %>% 
+    str_remove("^tweet_") %>% 
+    str_remove(fixed("public_metrics."))
+  
+  # Clean up some variables
+  
+  corpus$source <- corpus$source %>% 
+    str_remove("Twitter for") %>% 
+    str_remove("Twitter") %>% 
+    str_remove_all(" ")
+  
+  corpus <- corpus %>% # Assumption correct?
+    mutate(is_retweet = as.logical(replace_na(is_retweet, 0)),
+           is_reply = as.logical(replace_na(is_reply, 0)),
+           is_quote = as.logical(replace_na(is_quote, 0)))
+  
+  # Output
+  return(corpus)
+  
 }
 
-rm(current) # Remove last instance 
+
+
+# Function to collect account info ####
+
+# Static user info on all tweets in respective folder
+collectAccountInfo <- function(actor.type = character(0)) {
+  
+  # Establish path to data folder
+  # Relative path to EUtweet toot folder
+  data.path<- paste0("./data/", actor.type , "/rds_clean/")
+  
+  # List individual files therein 
+  files <- list.files(path = data.path, pattern = "*.RDS", full.names = T,
+                      recursive = T, include.dirs = T) # Include sub folders
+  
+  # Target DF
+  accounts <- data.frame()
+  
+  # Load individual files and append to target DF
+  for (i in 1:length(files)) {
+    
+    # Progress
+    print(paste0("Load/append file ", i, " of ", length(files)))
+    
+    # Read file
+    current <- read_rds(files[i])
+    
+    # Should column structure be partially inconsitent across files
+    # add explciti dplyr::select() call here
+    
+    # Select static user info 
+    # and follow naming conventions of corpus
+    
+    current <- current %>% 
+      select(author_id, starts_with("user_")) %>% 
+      unique() %>% 
+      rename(screen_name = user_username,
+             userid = author_id) %>% 
+      relocate(screen_name, userid)
+      
+    # Append to target DF
+    accounts <- rbind(accounts, current)
+  }
+  
+  # Remove last instance 
+  rm(current) 
+  
+  # Output
+  return(accounts)
+    
+}
+
+
+
+# EU tweets ####
+
+corp <- buildTweetCorpus("EU")
+write_rds(corp, "./data/corpii/EU_corpus.RDS")
+rm(eucorp)
+
+accounts <- collectAccountInfo("EU")
+write_rds(accounts, "./analysis_data/EU_account_list.RDS")
+rm(euaccounts)
+
+
+# IO tweets ####
+
+corp <- buildTweetCorpus("IO")
+write_rds(corp, "./data/corpii/IO_corpus.RDS")
+rm(corp)
+
+accounts <- collectAccountInfo("IO")
+write_rds(accounts, "./analysis_data/IO_account_list.RDS")
+rm(accounts)
+
+
+# # UK tweets ####
+# 
+# corp <- buildTweetCorpus("UK")
+# write_rds(corp, "./data/corpii/UK_corpus.RDS")
+# rm(corp)
+# 
+# accounts <- collectAccountInfo("IO")
+# write_rds(accounts, "./analysis_data/UK_account_list.RDS")
+# rm(accounts)
+# 
+# 
+# # Random tweets ####
+# 
+# corp <- buildTweetCorpus("TWT")
+# write_rds(corp, "./data/corpii/TWT_corpus.RDS")
+# rm(corp)
+
+
+
+
 
 #@Sina: here is a faster and cleaner alternative:
 #however, the resulting data is far too large for my laptop to keep it in the memory
 #my preferred method of analysis is to write a function and apply it individually to 
 #each rds. otherwise it takes a long time.
+
+# CR: while the apply functions are often faster than a foor loop, here you overburden your me
+# because this solution needs to hold all RDS from folder in environment at the same time
+# while my loop approach only holds the target object and one current file at each point in time ...
 
 #########Alternative data reading script#############
 #rdsdataDIR<- paste0(getwd(),"/Data/rds/")
@@ -65,135 +198,9 @@ rm(current) # Remove last instance
 #####################################################
 
 
-#<<<<<<< HEAD
-
-# Look at some descriptives ####
-
-# All variables (and number of missings)
-corpus  %>% 
-  summarise_each(funs(sum(is.na(.)))) -> vars 
-vars <- vars %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  rownames_to_column(var = "variable") %>% 
-  rename(nas = V1) %>% 
-  mutate(na_share = nas/nrow(corpus))
-
-=======
-# Look at some descriptives ####
-
-#>>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
-# Accounts
-# 117
-length(unique(corpus$screen_name))
-
-# Language
-table(corpus$lang, useNA = "ifany")
-# 285765 (87%) in english (en)
-# What is 'uk' and 'eu' for example?
-
-# Symbols present?
-# Only three incidences What is measured here?
-#
-table(is.na(corpus$symbols))
-symbols <- corpus %>% filter(!is.na(symbols))
-<<<<<<< HEAD# What are these?
-=======#and these?
-# Drop var for now
-corpus$symbols <- NULL
->>>>>>> 54109f0f2826d999a0239385c2a3af8e4210620c
-
-# Number of followers
-# Is this measured at time of tweet?
-hist(corpus$followers_count)
-
-<<<<<<< HEAD
-followers <- corpus %>% 
-  select(screen_name, followers_count) %>% 
-  group_by(screen_name) %>% 
-  summarise(mean = mean(followers_count),
-            min = min(followers_count),
-            max = max(followers_count)) %>% 
-  arrange(desc(mean))
-# Seems to by fixed by screen_name
-# Poor Euratom ...
-# Normalise engagement indicators along this var ... ?
-
-# Media types
-mtypes <- unique(corpus$media_type)
-# Only 1 or two phots in there (in 44% of cases)
-
-# How many are 'only' retweets?
-sum(corpus$is_retweet)
-(sum(corpus$is_retweet)/nrow(corpus))*100 # Percent
-
-# How many are quotes?
-sum(corpus$is_quote)
-(sum(corpus$is_quote)/nrow(corpus))*100 # Percent
 
 
 
-# Analyse daily tweet volume ####
-
-# Daily number of tweets in sample
-days <- corpus %>% 
-  mutate(day = str_trim(str_extract(created_at, ".*^? "))) %>% 
-  select(day) %>% 
-  group_by(day) %>% 
-  summarise(count = n())
-
-# Descriptives
-min(days$day)  
-max(days$day)
-mean(days$count)
-
-# Time series
-dates <- seq(as.Date(min(days$day)), as.Date(max(days$day)), by = "days") %>% # all dates within range
-  as.data.frame() %>% 
-  rename(day = 1) %>% 
-  mutate(day = as.character(day))
-
-dates <- left_join(dates, days, by = "day")
-dates$count[is.na(dates$count)] <- 0
-
-breaks <- dates %>%  # Breaks for x-axis
-  filter(str_detect(day, "01-01$")) %>% # 1st January
-  select(day)
-breaks <- as.character(breaks[,1])
-labels <- str_remove(breaks, "-.*$") %>% unique() # Year only
-
-ggplot(dates, aes(x= day, y= count)) + 
-  geom_col()+
-  scale_x_discrete(breaks = breaks, labels = labels)+
-  labs(title = "Daily volume of tweets in EUtweet sample",
-       subtitle = "117 verified accounts of supranational persons, offices, and institutions",
-       x = "\nDay",
-       y = "Number of tweets\n")+
-  theme_bw()+
-  theme()
-
-ggsave("./plots/TweetVolumeDaily.png", width = 16, height = 10, units = "cm")
-
-# Weekday
-old.setting <- Sys.getlocale("LC_TIME") # Store current time setting of locale
-Sys.setlocale("LC_TIME","English_United States.1252") # switch to English
-wdays <- dates %>% 
-  mutate(weekday = weekdays(as.Date(day))) %>% 
-  group_by(weekday) %>% 
-  summarise(mean = mean(count))
-Sys.setlocale("LC_TIME", old.setting) # Reinstate old LC Time setting
-wdays$weekday <- factor(wdays$weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
-
-ggplot(wdays, aes(x= mean, y= fct_rev(weekday))) + 
-  geom_col()+
-  labs(title = "Tweets per weekday in EUtweet sample",
-       subtitle = "117 verified accounts of supranational persons, offices, and institutions",
-       x = "\nAverage number of tweets\n(2009-03-13/2021-03-14) ",
-       y = "")+
-  theme_bw()+
-  theme()
-
-ggsave("./plots/TweetVolumeWeekday.png", width = 16, height = 10, units = "cm")
 
 
 # Export account info ####
@@ -229,10 +236,7 @@ corpus <- corpus %>% select(-c(display_text_width, status_url, symbols,
 
 # Clean up a little ####
 
-corpus$source <- corpus$source %>% 
-  str_remove("Twitter for") %>% 
-  str_remove("Twitter") %>% 
-  str_remove_all(" ")
+
 
 # Encoding issues
 # Photo / Media type
