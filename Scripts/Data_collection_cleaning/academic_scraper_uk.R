@@ -316,7 +316,9 @@ analysis_vars<- c("tweet_id",
 
 twitter_rds_reader<- function(file_path, analysis_vars){
   data<-readRDS(file_path)
-  #choose the important variables and make sure that everything is the same class
+  #choose the important variables and
+  #make sure that everything is the same class
+  #I shouldn't have done this... only certain things should be character
   data <- data %>%
     select(any_of(analysis_vars)) %>%
     mutate(across(everything(),~as.character(.x)))

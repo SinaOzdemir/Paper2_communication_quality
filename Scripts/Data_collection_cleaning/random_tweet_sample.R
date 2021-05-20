@@ -44,7 +44,8 @@ country_bbox<- do.call("rbind",country_coords) %>%
          country_name = as.vector(country_name, mode = "character"))
          
 
-eu_bbox<- left_join(x = eu_countries_df,country_bbox, by = "country_code") %>% drop_na()
+eu_bbox<- left_join(x = eu_countries_df,country_bbox, by = "country_code") %>%
+  drop_na()
 #Malta's bbox is missing.
 
 
