@@ -74,6 +74,38 @@ a<-hunspell_find(text = sandbox[5]) %>% unlist()
 b<-hunspell_suggest(words = a)
 b[[1]][1]
 
+# try a dictionary approach.
+
+## Replace hashtags with white space so the hunspell is not confused
+
+sandbox_cleaned<- str_replace_all(string = sandbox,pattern = "#",replacement = " ")
+
+#identify misspellings
+#twitter data have the mentions and hashtags in seperate columns,
+#I can use it create an ignore list before I check for misspellings
+#I still have to deal with abbreviations tho.
+sb_misspelled_words<- hunspell(sandbox_cleaned,"text") %>% unlist
+
+sb_suggestions<- hunspell_suggest(sb_misspelled_words)
+
+names(sb_suggestions)<-sb_misspelled_words
+#so now I need to the suggestions to one word per misspelling, prioritizing
+#only the first element
+
+#purr suggestion:
+#I love it when elegant solutions work at the first try...
+spelling_dictionary<- purrr::map(sb_suggestions,1)
+
+#grammar correction
+
+for (i in 1:length(spelling_dictionary)) {
+  print(paste0("looking up ",names(spelling_dictionary)[i]," to replace with ",spelling_dictionary[[i]]))
+  sandbox<- str_replace_all(string = sandbox,
+                                          pattern = names(spelling_dictionary)[i],
+                                          replacement = spelling_dictionary[[i]])
+}
+
+
 ######
 hashtags_removed_sandbox<- str_replace_all(string = sandbox,pattern = "#",replacement = " ")
 sandbox_parse<- spacy_tokenize(hashtags_removed_sandbox,"word",
@@ -103,33 +135,106 @@ tweet_grammar <- resp_pos_tag %>%
 
 # test with real data -----------------------------------------------------
 
-
 #test with the data:
 
 #reading the sample data 
-data<- readRDS(paste0(data.path,"EUcorpus_cleaned_sample.RDS"))
+data<- readRDS(paste0(data.path,"EU_corpus_sample.RDS"))
 
-tweets<- data %>% filter(langlang == "en") %>% pull(tweet_text)
+tweets<- data %>% filter(tweet_lang == "en") %>% pull(tweet_text)
+tweet_ids <- data %>% filter(tweet_lang == "en") %>% pull(tweet_id)
+
+political_respons_example<-data %>% filter(tweet_id == "1001044775120916480") %>% pull(tweet_text)
+
 #there are some problems in the reprocessed tweets. Obs 960 still has emojis for some reason. there is also a character with unicode \ufe0f
 # lets ignore this for now
 
-names(tweets)<- data %>% filter(langlang == "en") %>% pull(tweet_id)
+#replace the emojis with verbal equivalents:
+emoji_dictionar<- readRDS(file = file.choose())
+emoji_dictionar$emoji_text<-paste0(" ",emoji_dictionar$emoji_text," ")
+no_emoji_tweets<-tweets
 
-tweets_pos_tag<- spacy_parse(x = tweets, pos =T,
-                             tag = T,
-                             lemma = F,
-                             entity = F,
-                             nounphrase = T) %>% nounphrase_consolidate(concatenator = " ") 
-#noun phrase recognition is not very accurate, it recognizes things like "reserachers", "freedom" etc. as nounphrase.
-#takes a couple of seconds for 2502 observations
+for (i in 1:nrow(emoji_dictionar)) {
+  no_emoji_tweets<-str_replace_all(string = no_emoji_tweets,
+                                   pattern = emoji_dictionar$emoji_code[i],
+                                   replacement = emoji_dictionar$emoji_text[i])
+}
 
-tweets_grammar_df<- tweets_pos_tag %>% filter(pos != "PUNCT") %>% 
-  group_by(doc_id,sentence_id) %>%
-  summarise(grammar_pos = paste(pos, collapse = "+"),
-            grammar_tag = paste(tag, collapse = "+"),
-            sentences = paste(token, collapse = " "))
+#also this process removes names attribute:
+#Christian's cleaning did something to encoding
+#this works if I use it on raw text data
+# also need to add padding around the emoji names otherwise it looks weird in the 
+#text eg: "greecehandshakeeu"
+
+#spellcheck
+
+hashtags<- data %>% pull(tweet_hashtags) %>% 
+mentions<- data %>% pull(tweet_mentioned_username)
+to_ignore<- c(hashtags,mentions)
+
+spelling_mistakes<- hunspell(text = no_emoji_tweets,format = "text",ignore = to_ignore) %>% unlist()
+spelling_suggestions<- hunspell_suggest(spelling_mistakes) %>% map(.,1)
+names(spelling_suggestions)<-spelling_mistakes
+
+no_emoji_spell_checked_tweets<- no_emoji_tweets
+for (i in 1:length(spelling_suggestions)) {
+  no_emoji_spell_checked_tweets<-str_replace_all(no_emoji_spell_checked_tweets,
+                                                 pattern = names(spelling_suggestions)[i],
+                                                 replacement = spelling_suggestions[[i]])
+  
+}
+
+#jesus fucking C, why is "c(\"cyber\", \"da12\", \"da12trustsec\")" saved as character.
+# my bad... I coerced everything into character...
+# Need to go all the way back to the json to unfuck this....
+# this shouldn't interfere with CR's code and results tho.
+
+#parsing:
+spacy_initialize()
+#need to do a tiny bit of cleaning before parsing to accommodate 
+#twitter communication
+
+no_emoji_spell_checked_tweets<- no_emoji_spell_checked_tweets %>% 
+  str_remove_all("@") %>% 
+  str_remove_all("http.*?( |$)") %>% 
+  str_replace_all(pattern = "#",
+                  replacement = " ") %>% #replaced with white space because of consequitive hashtags
+  str_replace_all("( )+", " ")
+
+#actually a proper preprocessing where stop words,numbers, etc. removed
+#is necessary. The question is how much would it effect the grammar
+#extraction? I am still looking forun Proper_nouns+verb as in the example.
+names(no_emoji_spell_checked_tweets)<-data %>% filter(tweet_lang == "en") %>% pull(tweet_id)
+
+#more preprocessing:
+#tweet ids and order is f*ed up in preprocessing...
+tweets_preprocessed<- spacy_tokenize(x = no_emoji_spell_checked_tweets,
+                                     what = "word",
+                                     remove_punct = T,
+                                     remove_url = T,
+                                     remove_numbers = T,
+                                     remove_separators = T,
+                                     remove_symbols = T,
+                                     padding = T,
+                                     output = "data.frame") %>%
+  group_by(doc_id) %>%
+  summarise(tweet_text = paste(token,collapse = " ")) %>%
+  pull(tweet_text) %>%
+  purr::set_names(.,nm = tweet_ids)
 
 
+parsed_tweets<- spacy_parse(x = tweets_preprocessed,
+                            pos = T,
+                            tag = T,
+                            lemma = F,
+                            entity = T,
+                            nounphrase = T,
+                            multithread = T)
+
+entity_parsed_tweets<- parsed_tweets %>% entity_consolidate()
+
+noun_phrase_tweets<- parsed_tweets %>% nounphrase_consolidate()
+
+#
 # Notes -------------------------------------------------------------------
 
 
