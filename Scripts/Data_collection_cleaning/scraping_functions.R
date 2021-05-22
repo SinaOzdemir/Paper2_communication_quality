@@ -1,6 +1,17 @@
 #data scraping and shaping functions:
 
 
+# helper functions --------------------------------------------------------
+
+make.dir<- function(file.path){
+  if(dir.exists(file.path)){
+    return(file.path)
+  }else{
+    dir.create(path = file.path)
+    return(file.path)
+  }
+}
+
 meta_extra <- function(file_path,file_names){
   a <- readRDS(file = file_path) %>% jsonlite::flatten()
   b <- Hmisc::contents(a)[[1]] %>%
@@ -11,6 +22,135 @@ meta_extra <- function(file_path,file_names){
 }
 
 
+# twitter scrapers --------------------------------------------------------
+
+twitter_json_scraper<- function(accounts,#provide account handles
+                                token_v1,#twitter API v1.0 token to look up account information,necessary if account_look_up = T
+                                bearer_token,#twitter API v2.0 token to scrape tweets
+                                account_look_up = F,#if accounts is only names, lookup meta data on accounts
+                                data.folder = character(0),#the folder to store the data
+                                case = c("EU","UK","IO","TWT"),#the case name (EU,IO,UK, or TWT),user must choose one
+                                stream_days = numeric(0),#if the case is chosen as TWT, user needs to specify how long the streaming will go on as number of days
+                                starting_time = "2021-05-13 11:53:20 CEST", #provide a starting date in character format for streaming
+                                ){
+  
+  #if the user only provided twitter handles,
+  #this chunk looks up meta information on the account
+  #meta-information account creation date is necessary
+  #for the rest of the code to work
+  if(case == "TWT"){
+    
+    eu_countries <- read_html("https://europa.eu/european-union/about-eu/countries_en") %>%
+      rvest::html_elements("#year-entry2 a") %>% html_text2()
+    eu_countries_df <- tibble(country_name = eu_countries,
+                              country_code = countrycode::countrycode(eu_countries,origin = "country.name",destination = "iso2c"))
+    
+    
+    country_coords<-jsonlite::fromJSON(txt = "https://raw.githubusercontent.com/sandstrom/country-bounding-boxes/master/bounding-boxes.json")
+    
+    country_bbox<- do.call("rbind",country_coords) %>%
+      as.data.frame %>%
+      mutate(country_code = rownames(.)) %>%
+      rename(country_name = V1, bbox = V2) %>% 
+      mutate(country_code = as.vector(country_code, mode = "character"),
+             country_name = as.vector(country_name, mode = "character"))
+    
+    eu_bbox<- left_join(x = eu_countries_df,country_bbox, by = "country_code") %>%
+      drop_na()
+    
+    repeat{
+      
+      for (i in 1:nrow(eu_bbox)) {
+        
+        country_name<-eu_bbox$country_name.x[i]
+        rl<-rate_limits(token = v_1_token)
+        print(paste0(country_name," ",Sys.time()))
+        
+        if(any(rl$remaining <= 2)){
+          print("rate limit reached, sleeping 15 min.")
+          Sys.sleep(15*60)
+        }else{
+          
+          country_coords<- eu_bbox$bbox[[i]]
+          tweet_stream<- stream_tweets(q = country_coords,
+                                       timeout = (60*5),
+                                       language = "en",
+                                       parse = T,
+                                       token = v_1_token)
+          time<-as.character(Sys.time()) %>% gsub(":|\\s","-",.)
+          saveRDS(tweet_stream,file = paste0(data.path,"TWT/",country_name,"_",time,".RDS"))
+        }}
+      end_time<- Sys.time()  
+      
+      time_diff<- as.numeric(difftime(end_time,starting_time, units = "days"))
+      
+      if(time_diff >= stream_days){
+        break
+      }
+    }
+    
+  }
+  
+  if(isTRUE(account_look_up)){
+    
+    require(rtweet)
+    
+    if(is.vector(accounts,mode = "character")){
+    account_meta_data<- rtweet::lookup_users(users = accounts, parse = T,token = token_v1)
+    
+    }else if(is.data.frame(accounts)||is_tibble(accounts)){
+     
+       account_handles<- accounts %>%
+        select(matches(match = "username")) %>%
+        pull()
+      
+       account_meta_data<- rtweet::lookup_users(users = account_handles,parse = T, token = token_v1)
+      
+    }else{
+      
+      stop("please provide accounts handles either as a character vector or as a column of a dataframe containing 'username' in the column name ")
+      
+    }
+    account_handles<- account_meta_data %>% pull(screen_name)
+    
+  }else{
+    account_meta_data<-accounts
+    account_handles<- account_meta_data %>% pull(screen_name)
+  }
+  
+    
+  for (i in 1:length(account_handles)) {
+    print(paste0("getting data for ", account_handles[i]," at ",Sys.time()))
+    
+    account_creation_date<- account_meta_data %>% 
+      filter(screen_name == account_handles[i]) %>% 
+      pull(account_created_at) %>% 
+      as.character() %>% 
+      str_split(pattern = " ")
+    
+    data_start_date <- paste0(account_creation_date[[1]][1],"T",account_creation_date[[1]][2],"Z")
+    
+    data_end_date <- paste0(Sys.Date(),"T00:00:00Z")
+    
+    data.path<- make.dir(paste(data.folder,case,"json",account_handles[i],sep = "/"))
+    
+    tweets<- academictwitteR::get_user_tweets(users = account_handles[i],
+                                              start_tweets = data_start_date,
+                                              end_tweets = data_end_date,
+                                              bearer_token = bearer_token,
+                                              bind_tweets = F,
+                                              data_path = data.path)
+    
+    
+  }
+  
+}
+
+
+# data cleaners -----------------------------------------------------------
+
+
+#these should still be applied with for loop for memory conservations
 twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,saveDIR = NULL){
   #if the function will be used with an existing RDS on a local drive,
   #the function can read it now. User needs to provide full path to the file
@@ -121,6 +261,33 @@ twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,save
   #finally return the modified dataset.
   
 }
+analysis_vars<- c("tweet_id",
+                  "is_retweet",
+                  "retweet_status_id",
+                  "is_reply",
+                  "reply_to_status_id",
+                  "is_quote",
+                  "quoted_status_id",
+                  "contains_media",
+                  "tweet_mentioned_username",
+                  "tweet_hashtags",
+                  "tweet_created_at",
+                  "tweet_text",
+                  "tweet_lang",
+                  "tweet_public_metrics.retweet_count",
+                  "tweet_public_metrics.reply_count",
+                  "tweet_public_metrics.like_count",
+                  "tweet_public_metrics.quote_count",
+                  "author_id",
+                  "user_username",
+                  "user_name",
+                  "user_description",
+                  "user_created_at",
+                  "user_public_metrics.followers_count",
+                  "user_public_metrics.following_count",
+                  "user_public_metrics.tweet_count",
+                  "user_public_metrics.listed_count")
+
 
 
 twitter_rds_reader<- function(file_path, analysis_vars){
@@ -128,10 +295,10 @@ twitter_rds_reader<- function(file_path, analysis_vars){
   #choose the important variables and
   #make sure that everything is the same class
   #I shouldn't have done this... only certain things should be character
-  data <- data %>%
-    select(any_of(analysis_vars)) %>%
-    mutate(across(everything(),~as.character(.x)))
-  
+  # data <- data %>%
+  #   select(any_of(analysis_vars)) %>%
+  #   mutate(across(everything(),~as.character(.x)))
+
   #recode nas in binaries
   na_vars<- Hmisc::contents(object = data)[[1]] %>%
     as_tibble(rownames = "var_names") %>% 
