@@ -73,7 +73,7 @@ buildTweetCorpus <- function(actor.type = character(0)) {
     str_remove("Twitter") %>% 
     str_remove_all(" ")
   
-  corpus <- corpus %>% # Assumption correct?
+  corpus <- corpus %>% # Assumption correct? #yep it is
     mutate(is_retweet = as.logical(replace_na(is_retweet, 0)),
            is_reply = as.logical(replace_na(is_reply, 0)),
            is_quote = as.logical(replace_na(is_quote, 0)))
