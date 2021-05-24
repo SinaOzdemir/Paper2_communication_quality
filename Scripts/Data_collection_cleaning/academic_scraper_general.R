@@ -1,244 +1,135 @@
 #data scraper (to be used wih academic twitter access v2.0)
 
-devtools::install_github("cjbarrie/academictwitteR")
-
-library(academictwitteR)
-library(tidyverse)
-data_path<- paste0(getwd(),"/data/")
+source(file = paste0(getwd(),"/Scripts/Data_collection_cleaning/scraping_functions.R"))
+data_path<- paste0(getwd(),"/data")
 #for twitter api
 bearer_token <- "$BEARER"
-
+api_v1_token <- rtweet::create_token(app = "$appname",
+                                     consumer_key = "$consumer_key",
+                                     consumer_secret = "$consumer_secret_key",
+                                     access_token = "$access_token",
+                                     access_secret = "$access_secret_key",
+                                     set_renv = F)
 user_names<- readRDS(file.choose())
 
-metadata<- rtweet::lookup_users(users = user_names,parse = T,token = "$API_1_token")
 # scrape the tweets ------------------------------------------------
-#amele işi indirme...
 
-#first scrape tweets:
+#scrape EU tweets
+twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+                     bearer_token = bearer_token,
+                     account_look_up = T,
+                     data.folder = data_path,case = "EU")
 
-accounts<- metadata$screen_name
+#Scrape IO tweets
+twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+                     bearer_token = bearer_token,
+                     account_look_up = T,
+                     data.folder = data_path,case = "IO")
 
-for (i in 219:length(accounts)) {
-  #get_creation_date
-  creation_date<- metadata %>%
-    filter(screen_name == accounts[i]) %>%
-    pull(account_created_at) %>%
-    as.character() %>%
-    str_split(pattern = " ")
-  #formulate the start date
-  start_date<-  paste0(creation_date[[1]][1],"T",creation_date[[1]][2],"Z")
-  #formulate the end date
-  end_date <-  paste0(Sys.Date(),"T00:00:00Z")
-  #formulate the json save directory
-  
-  if(dir.exists(paste0(getwd(),"/data/UK/json/"))){
-    data.path<-paste0(getwd(),"/data/UK/json/",accounts[i],"/")}
-  else{
-    dir.create(paste0(getwd(),"/data/UK/json/"))
-    data.path<-paste0(getwd(),"/data/UK/json/",accounts[i],"/")
-    }
-  
-  #get the tweets and users information
-  
-  
-  tweets<- academictwitteR::get_user_tweets(users = accounts[i],
-                                            start_tweets = start_date,
-                                            end_tweets = end_date,
-                                            bearer_token = bearer_token,
-                                            bind_tweets = F,
-                                            data_path = data.path)
-  
-    
-}
+#Scraoe UK tweets:
+
+twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+                     bearer_token = bearer_token,
+                     account_look_up = T,
+                     data.folder = data_path,case = "UK")
+
+#scrape random tweets:
+
+twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+                     bearer_token = bearer_token,
+                     account_look_up = T,
+                     data.folder = data_path,
+                     case = "TWT",
+                     stream_days = 7,starting_time ="2021-05-13 11:53:20 CEST")
 
 
 # bind user data and tweet data together in RDS -------------------------------------------------------------------
 
+data_binder(data.path = data_path,case = "EU")
+data_binder(data.path = data_path,case = "IO")
+data_binder(data.path = data_path,case = "UK")
+data_binder(data.path = data_path, case = "TWT")
 
-for (i in 1:length(accounts)){
-  print(accounts[i])
- #some accounts don't exist anymore, so the loop throws an error
-  #I was going home before I ran this script and I didn't want it to break down
-  #when I was away, thats why I used try(,silent = T)
-  try(expr = { data.path<-paste0(getwd(),"/data/UK/json/",accounts[i],"/")
-  
-  tweet_data <- academictwitteR::bind_tweet_jsons(data.path)
-  
-  tweet_vars<-colnames(tweet_data)[-which(colnames(tweet_data)%in%"author_id")]
-  
-  colnames(tweet_data)[-which(colnames(tweet_data)%in%"author_id")]<- paste("tweet",tweet_vars,sep = "_")
-  
-  user<- tweet_data$author_id[1]
-  
-  user_data <- academictwitteR::bind_user_jsons(data.path) %>%
-    filter(id == user) %>%
-    rename(author_id = id) %>%
-    sample_n(size = 1)
-  
-  user_vars<- colnames(user_data)[-which(colnames(user_data)%in%"author_id")]
-  
-  colnames(user_data)[-which(colnames(user_data)%in%"author_id")]<- paste("user",user_vars,sep = "_")
-  
-  tweet_data<- left_join(tweet_data,user_data,by = "author_id")
-  
-  if(dir.exists(paste0(getwd(),"/data/UK/rds"))){
-  
-    saveRDS(tweet_data, file = paste0(getwd(),"/data/UK/rds/tweets_and_prof_info_",accounts[i],".RDS"))
-  
-    }else{
-    
-      dir.create(paste0(getwd(),"/data/UK/rds"))
-    
-      saveRDS(tweet_data, file = paste0(getwd(),"/data/UK/rds/tweets_and_prof_info_",accounts[i],".RDS"))
-  }},silent = T)
-}
 
 # cleaning dfs: ---------------------------------------------------------------
-rds.path<- paste0(getwd(),"/data/UK/rds/")
+#I didn't fully functionalize rds cleaning to be more flexible
+#but wrote the script in a way that would work with "source" command
+
+#EU
+
+rds.path<- paste0(getwd(),"/data/EU/rds/")
 rds.files<- list.files(rds.path,"*.RDS",full.names = T)
 rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
-
-meta_extra <- function(file_path,file_names){
-  a <- readRDS(file = file_path) %>% jsonlite::flatten()
-  b <- Hmisc::contents(a)[[1]] %>%
-    as_tibble(rownames = "var.names") %>% 
-    mutate(screen_name = rep(file_names, times = nrow(.))) %>%
-    select(-any_of("NAs"))
-  return(b)
-}
-
-
-ncol_meta_data<- map2(.x = rds.files, .y = rds.file.names, .f = meta_extra)
-
-ncol_meta_data_df<- do.call("rbind",ncol_meta_data)
 
 #lets see which columns are problematic:
 #if all the columns appear in equal number (i.e all the data is same dimension)
 #their count number should be the same
 
-prob_variables<-ncol_meta_data_df %>%
+prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
   group_by(var.names) %>%
   summarise(col_count = n()) %>%
   filter(col_count < max(.$col_count)) %>% 
   pull(var.names)
 
-#some of the important variables like hashtags are missing in some dataset
-#Maybe they have actually never used hashtags
 
-twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,saveDIR = NULL){
-  #if the function will be used with an existing RDS on a local drive,
-  #the function can read it now. User needs to provide full path to the file
-  if(isTRUE(read)){
-    twitter_data<- readRDS(file) %>% jsonlite::flatten()
-  }else{
-    #the function assumes that it will be used with an R object in the global env.
-    
-    twitter_data <- file
-  }
-  
-  
-  #make the dimensions even----
-  #this changes rest of the function a little.
-  if(isTRUE(dim_even)){
-    #this simply removes uncommon columns
-    missing<- ifelse(prob_variables%in%colnames(twitter_data),1,0)
-    
-    missing_cols<-cbind(prob_variables,missing) %>%
-      as.data.frame() %>%
-      filter(missing == 0 ) %>%
-      pull(prob_variables)
-    
-    twitter_data[missing_cols]<-NA
-  }
-  
-  #referenced_tweets for retweets, quotes and replies----
-  if(isTRUE("tweet_referenced_tweets"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_referenced_tweets)))){
-    for (i in 1:nrow(twitter_data)) {
-      if(length(twitter_data$tweet_referenced_tweets[[i]])==0){
-        twitter_data$tweet_referenced_tweets[i]<-NA
-      }
-      
-    }
-    
-    
-    twitter_data<- twitter_data[!is.na(twitter_data$tweet_referenced_tweets),] %>%
-      select(tweet_id,tweet_referenced_tweets) %>%
-      group_by(tweet_id) %>%
-      unnest(cols = c(tweet_referenced_tweets),names_sep = "_") %>%
-      right_join(x = .,y=twitter_data, by = "tweet_id")
-  }else{
-    missing_reference_vars<-c("tweet_referenced_tweets_type","tweet_referenced_tweets_id")
-    twitter_data[missing_reference_vars]<-NA
-  }
-  #create is_retweet, is_quote, is_reply and reply_to_status_id for later calculations
-  #here it breaks for some reason
-  
-  twitter_data$is_retweet = ifelse(twitter_data$tweet_referenced_tweets_type == "retweeted",1,0)
-  twitter_data$retweet_status_id = ifelse(twitter_data$tweet_referenced_tweets_type == "retweeted",twitter_data$tweet_referenced_tweets_id,NA)
-  twitter_data$is_reply = ifelse(twitter_data$tweet_referenced_tweets_type == "replied_to",1,0)
-  twitter_data$reply_to_status_id = ifelse(twitter_data$tweet_referenced_tweets_type == "replied_to",twitter_data$tweet_referenced_tweets_id,NA)
-  twitter_data$is_quote = ifelse(twitter_data$tweet_referenced_tweets_type == "quoted",1,0)
-  twitter_data$quoted_status_id = ifelse(twitter_data$tweet_referenced_tweets_type =="quoted",twitter_data$tweet_referenced_tweets_id,NA)
-  
-  #entities: hashtags and mentions----
-  if(isTRUE("tweet_entities.hashtags"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_entities.hashtags)))){
-    #hashtags
-    twitter_data<- twitter_data %>%
-      select(tweet_id, tweet_entities.hashtags) %>%
-      group_by(tweet_id) %>%
-      unnest(cols = c(tweet_entities.hashtags)) %>% 
-      plyr::dlply(.data = . , .variables = "tweet_id",.fun = function(i)i[["tag"]]) %>% 
-      tibble(tweet_id = names(.),tweet_hashtags = .) %>%
-      right_join(x = .,y = twitter_data,by = "tweet_id")
-  }else{
-    twitter_data["tweet_hashtags"]<-NA
-  }
-  #mentions
-  
-  if(isTRUE("tweet_entities.mentions"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_entities.mentions)))){
-    twitter_data<- twitter_data %>%
-      select(tweet_id, tweet_entities.mentions) %>%
-      group_by(tweet_id) %>%
-      unnest(cols = c(tweet_entities.mentions)) %>% 
-      plyr::dlply(.data = . , .variables = "tweet_id",.fun = function(i)i[["username"]]) %>% 
-      tibble(tweet_id = names(.),tweet_mentioned_username = .) %>%
-      right_join(x = .,y = twitter_data,by = "tweet_id")
-  }else{
-    twitter_data["tweet_mentioned_username"]<-NA
-  }
-  
-  #contains media ----
-  
-  if(isTRUE("tweet_attachments.media_keys"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_attachments.media_keys)))){
-    for(i in 1:nrow(twitter_data)){
-      if(length(twitter_data$tweet_attachments.media_keys[[i]]) == 0){
-        twitter_data$tweet_attachments.media_keys[i]<- NA
-      }
-    }
-    
-    twitter_data$contains_media <- ifelse(is.na(twitter_data$tweet_attachments.media_keys),0,1)
-  }else{
-    twitter_data["contains_media"]<-NA
-  }
-  #save modified rds----
-  if(isTRUE(save)){
-    #User needs to provide a save directory if 
-    #modified dataset needs to be saved
-    #!!!!IMPORTANT!!!
-    #The directory should not end with /
-    #otherwise the function will not save properly.
-    user_name<- twitter_data$author_id[1]
-    saveRDS(twitter_data,file = paste0(saveDIR,"/",user_name,".RDS"))
-  }else{
-    return(twitter_data)
-  }
-  #finally return the modified dataset.
-  
+#run the function on all data
+
+clean_rds_path<- paste0(getwd(),"/data/EU/rds_clean")
+for (i in 1:length(rds.files)){
+  twitter_rds_cleaner(file = rds.files[i],
+                      read = T,
+                      save = T,
+                      dim_even = T,
+                      prob_dim = prob_variables,
+                      saveDIR = clean_rds_path)
 }
 
-#test the function
+#IO
 
-function_test<- twitter_rds_cleaner(file = rds.files[54],read = T,save = F,dim_even = T)
+rds.path<- paste0(getwd(),"/data/IO/rds/")
+rds.files<- list.files(rds.path,"*.RDS",full.names = T)
+rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
+
+#lets see which columns are problematic:
+#if all the columns appear in equal number (i.e all the data is same dimension)
+#their count number should be the same
+
+prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
+  group_by(var.names) %>%
+  summarise(col_count = n()) %>%
+  filter(col_count < max(.$col_count)) %>% 
+  pull(var.names)
+
+
+#run the function on all data
+
+clean_rds_path<- paste0(getwd(),"/data/IO/rds_clean")
+for (i in 1:length(rds.files)){
+  twitter_rds_cleaner(file = rds.files[i],
+                      read = T,
+                      save = T,
+                      dim_even = T,
+                      prob_dim = prob_variables,
+                      saveDIR = clean_rds_path)
+}
+
+#UK
+
+
+rds.path<- paste0(getwd(),"/data/UK/rds/")
+rds.files<- list.files(rds.path,"*.RDS",full.names = T)
+rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
+
+#lets see which columns are problematic:
+#if all the columns appear in equal number (i.e all the data is same dimension)
+#their count number should be the same
+
+prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
+  group_by(var.names) %>%
+  summarise(col_count = n()) %>%
+  filter(col_count < max(.$col_count)) %>% 
+  pull(var.names)
+
 
 #run the function on all data
 
@@ -252,72 +143,3 @@ for (i in 1:length(rds.files)){
                       saveDIR = clean_rds_path)
 }
 
-
-# build corpus out of clean RDS files -------------------------------------
-
-
-
-clean_rds_files<-files <- list.files(path = clean_rds_path, pattern = "*.RDS",full.names = T)
-
-#there in total 49 variables in a df
-#Not all of them are necessary,
-#eleminating them early on make it easier
-#Otherwise the data is too big to read into memory
-analysis_vars<- c("tweet_id",
-                  "is_retweet",
-                  "retweet_status_id",
-                  "is_reply",
-                  "reply_to_status_id",
-                  "is_quote",
-                  "quoted_status_id",
-                  "contains_media",
-                  "tweet_mentioned_username",
-                  "tweet_hashtags",
-                  "tweet_created_at",
-                  "tweet_text",
-                  "tweet_lang",
-                  "tweet_public_metrics.retweet_count",
-                  "tweet_public_metrics.reply_count",
-                  "tweet_public_metrics.like_count",
-                  "tweet_public_metrics.quote_count",
-                  "author_id",
-                  "user_username",
-                  "user_name",
-                  "user_description",
-                  "user_created_at",
-                  "user_public_metrics.followers_count",
-                  "user_public_metrics.following_count",
-                  "user_public_metrics.tweet_count",
-                  "user_public_metrics.listed_count")
-
-twitter_rds_reader<- function(file_path, analysis_vars){
-  data<-readRDS(file_path)
-  #choose the important variables and make sure that everything is the same class
-  data <- data %>%
-    select(any_of(analysis_vars)) %>%
-    mutate(across(everything(),~as.character(.x)))
-  
-  #recode nas in binaries
-  na_vars<- Hmisc::contents(object = data)[[1]] %>%
-    as_tibble(rownames = "var_names") %>% 
-    filter(NAs > 0) %>% 
-    pull(var_names) %>%
-    grep(pattern = "is_*",x = .,perl = T,value = T)
-  #create various time-stamps for aggregation and summary stats
-  data<-data %>% mutate(across(.cols = all_of(na_vars), ~replace_na(.x,0))) %>%
-    mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>% 
-    mutate(tweet_year = lubridate::floor_date(tweet_date,unit = "year"),
-           tweet_month = lubridate::floor_date(tweet_date, unit = "month"),
-           tweet_day = lubridate::floor_date(tweet_date, unit = "day"),
-           tweet_calendar_date = lubridate::wday(tweet_date,label = T))
-  return(data)
-}
-
-tweet_corpus <-  map_dfr(.x = files,.f = twitter_rds_reader,analysis_vars = analysis_vars)
-#save the data
-if(dir.exists(paste0(data_path,"corpii"))){
-  saveRDS(tweet_corpus,file = paste0(data_path,"corpii/","twitter_corpus.RDS"))
-}else{
-  dir.create(paste0(data_path,"corpii"))
-  saveRDS(tweet_corpus,file = paste0(data_path,"corpii/","twitter_corpus.RDS"))
-}
