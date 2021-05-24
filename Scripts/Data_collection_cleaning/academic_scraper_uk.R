@@ -313,7 +313,7 @@ analysis_vars<- c("tweet_id",
                   "user_public_metrics.tweet_count",
                   "user_public_metrics.listed_count")
 
-
+#no need for this anymore
 twitter_rds_reader<- function(file_path, analysis_vars){
   data<-readRDS(file_path)
   #choose the important variables and
