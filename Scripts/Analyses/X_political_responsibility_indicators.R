@@ -138,17 +138,18 @@ tweet_grammar <- resp_pos_tag %>%
 #test with the data:
 
 #reading the sample data 
-data<- readRDS(paste0(data.path,"EU_corpus_sample.RDS"))
+data_id<- readRDS(paste0(data.path,"EU_corpus_sample.RDS")) %>% pull(tweet_id)
+data<- readRDS(file.choose()) %>% filter(id %in% data_id)
 
-tweets<- data %>% filter(tweet_lang == "en") %>% pull(tweet_text)
-tweet_ids <- data %>% filter(tweet_lang == "en") %>% pull(tweet_id)
+tweets<- data %>% filter(lang == "en") %>% pull(text)
+tweet_ids <- data %>% filter(lang == "en") %>% pull(id)
 
-political_respons_example<-data %>% filter(tweet_id == "1001044775120916480") %>% pull(tweet_text)
+political_respons_example<-data %>% filter(id == "1001044775120916480") %>% pull(text)
 
 #there are some problems in the reprocessed tweets. Obs 960 still has emojis for some reason. there is also a character with unicode \ufe0f
 # lets ignore this for now
 
-#replace the emojis with verbal equivalents:
+#replace the emojis with verbal equivalents:-----
 emoji_dictionar<- readRDS(file = file.choose())
 emoji_dictionar$emoji_text<-paste0(" ",emoji_dictionar$emoji_text," ")
 no_emoji_tweets<-tweets
@@ -158,22 +159,38 @@ for (i in 1:nrow(emoji_dictionar)) {
                                    pattern = emoji_dictionar$emoji_code[i],
                                    replacement = emoji_dictionar$emoji_text[i])
 }
-
+###################################################.
 #also this process removes names attribute:
 #Christian's cleaning did something to encoding
 #this works if I use it on raw text data
 # also need to add padding around the emoji names otherwise it looks weird in the 
 #text eg: "greecehandshakeeu"
+#Need to remove links, hashtags and @s before spell checking
+###################################################.
 
-#spellcheck
+#spellcheck-----
 
-hashtags<- data %>% pull(tweet_hashtags) %>% 
-mentions<- data %>% pull(tweet_mentioned_username)
+#to ignore list needs a rework. Instead of ignoring things in the hashtag and mention columns,
+#its better to create a hastag and mention list from the raw text and push it to ignore
+hashtags<- str_extract_all(string = no_emoji_tweets,pattern = "[#][\\w_-]+") %>% unlist() %>% unique()
+mentions<- str_extract_all(string = no_emoji_tweets,pattern = "[@][\\w_-]+") %>% unlist() %>% unique()
 to_ignore<- c(hashtags,mentions)
 
-spelling_mistakes<- hunspell(text = no_emoji_tweets,format = "text",ignore = to_ignore) %>% unlist()
-spelling_suggestions<- hunspell_suggest(spelling_mistakes) %>% map(.,1)
-names(spelling_suggestions)<-spelling_mistakes
+for_spell_checking_tweets<-no_emoji_tweets %>% 
+  str_remove_all("[#][\\w_-]+") %>%
+  str_remove_all("[@][\\w_-]+") %>% 
+  str_remove_all("http.*?( |$)") %>% 
+  str_remove_all("\n") %>%
+  str_replace_all(pattern = "&amp;",replacement = "&") %>% #replaced with white space because of consecutive hashtags
+  str_replace_all("( )+", " ")# I might as well do all the preprocessing here actually...
+
+
+spelling_mistakes<- hunspell(text = for_spell_checking_tweets,format = "text",ignore = to_ignore,dict = dictionary("en_GB")) %>% unlist() %>% unique()
+
+spelling_suggestions<- hunspell_suggest(spelling_mistakes) %>% map(.,1) %>% set_names(nm = spelling_mistakes)
+
+
+not_ignored<-names(spelling_suggestions)[which(names(spelling_suggestions)%in%to_ignore)]
 
 no_emoji_spell_checked_tweets<- no_emoji_tweets
 for (i in 1:length(spelling_suggestions)) {
@@ -183,21 +200,31 @@ for (i in 1:length(spelling_suggestions)) {
   
 }
 
-#jesus fucking C, why is "c(\"cyber\", \"da12\", \"da12trustsec\")" saved as character.
-# my bad... I coerced everything into character...
-# Need to go all the way back to the json to unfuck this....
-# this shouldn't interfere with CR's code and results tho.
+###########################.
+#Spell checking mostly picks up on 
+#special names and non-english names
+#I think spell checking would introduce more noise at this point
+#also regular expression doesn't remove all links.
+###########################.
 
-#parsing:
+
+#parsing:-----
+
+##Notes##
+#1) spell checking with hunspell didn't work. It mostly recognizes special names thus introduces more noise
+#2) Twitter specific communication features (#&@) must be accommodated before POS tagging with some preprocessing. I am not sure how to go about it yet
+#3) POS tagging should include dependency true relational grammar parsing.
+
+
 spacy_initialize()
 #need to do a tiny bit of cleaning before parsing to accommodate 
 #twitter communication
 
 no_emoji_spell_checked_tweets<- no_emoji_spell_checked_tweets %>% 
   str_remove_all("@") %>% 
-  str_remove_all("http.*?( |$)") %>% 
+  qdapRegex::rm_twitter_url(text.var = .,trim = T,clean = T,pattern = "@rm_twitter_url") %>% 
   str_replace_all(pattern = "#",
-                  replacement = " ") %>% #replaced with white space because of consequitive hashtags
+                  replacement = " ") %>% #replaced with white space because of consecutive hashtags
   str_replace_all("( )+", " ")
 
 #actually a proper preprocessing where stop words,numbers, etc. removed
