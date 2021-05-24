@@ -1,5 +1,24 @@
 #data scraping and shaping functions:
 
+# packages: ---------------------------------------------------------------
+
+packs<- c("tidyverse","Hmisc","rtweet","academictwitteR","jsonlite")
+existing_packs<-installed.packages()[,1]
+
+package_loader<- function(packs = character(0)){
+  existing_packs<- installed.packages()[,1]
+  if(all(packs%in%existing_packs)){
+    lapply(packs,library, character.only = T)
+  }else{
+    missing_packages<- packs[-which(packs%in%existing_packs)]
+    install.packages(missing_packages)
+    lapply(packs,library(character.only = T))
+    }
+  
+}
+
+
+package_loader(packs = packs)
 
 # helper functions --------------------------------------------------------
 
@@ -31,9 +50,12 @@ twitter_json_scraper<- function(accounts,#provide account handles
                                 data.folder = character(0),#the folder to store the data
                                 case = c("EU","UK","IO","TWT"),#the case name (EU,IO,UK, or TWT),user must choose one
                                 stream_days = numeric(0),#if the case is chosen as TWT, user needs to specify how long the streaming will go on as number of days
-                                starting_time = "2021-05-13 11:53:20 CEST", #provide a starting date in character format for streaming
-                                ){
+                                starting_time = "2021-05-13 11:53:20 CEST"){
+                                #provide a starting date in character format for streaming
   
+  
+  
+      
   #if the user only provided twitter handles,
   #this chunk looks up meta information on the account
   #meta-information account creation date is necessary
@@ -149,6 +171,43 @@ twitter_json_scraper<- function(accounts,#provide account handles
 
 # data cleaners -----------------------------------------------------------
 
+#data binder
+
+data_binder<- function(data.path,case = c("EU","IO","UK","TWT")){
+  
+  if(case == "TWT"){
+    file_path<- paste(data.path,case,sep = "/")
+    rds_files<-list.files(path = file_path,pattern = "*.RDS",full.names = T)
+    rds<- purrr::map_dfr(rds_files,readRDS)
+    saveRDS(rds,file = paste0(file_path,"random_tweets.RDS"))
+  }else{
+  
+  json_directory<- paste(data.path,case,"json",sep = "/")
+  json_files<- list.dirs(path = json_directory,full.names = T,recursive = F)
+  case_names<- list.dirs(path = json_directory,full.names = F,recursive = F)
+  
+  for (i in 1:length(json_files)) {
+    json_case_data<- paste0(json_files[i],"/")
+    tweet_data<- academictwitteR::bind_tweet_jsons(json_case_data)
+    tweet_vars<- colnames(tweet_data)[-whcih(colnames(tweet_data)%in%"author_id")]<-paste("tweet",tweet_vars,sep = "_")
+    user<- tweet_data$author_id[1]
+    user_data<- academictwitteR::bind_user_jsons(json_case_data) %>% 
+      filter(id == user) %>% sample_n(size = 1)
+    
+    user_vars<- colnames(user_data)[-which(colnames(user_data)%in%"author_id")]
+    colnames(user_data)
+    
+    colnames(user_data)[-which(colnames(user_data)%in%"author_id")]<- paste("user",user_vars,sep = "_")
+    
+    tweet_data<- left_join(tweet_data,user_data,by = "author_id")
+    save_dir<-make.dir(file.path = paste(data.path,case,"rds",sep = "/"))
+    
+    saveRDS(object = tweet_data,file = paste0(save_dir,"/","tweets_and_prof_info_",case_names[i],".RDS"))
+    
+  }
+  }
+  
+}
 
 #these should still be applied with for loop for memory conservations
 twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,saveDIR = NULL){
