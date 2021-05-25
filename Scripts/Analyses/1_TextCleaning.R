@@ -359,3 +359,4 @@ corpus <- left_join(corpus, langinfo, by = "id")
 # Export 
 write_rds(corpus, "./data/corpii/IO_corpus_cleaned.RDS")
 
+Sys.time()
