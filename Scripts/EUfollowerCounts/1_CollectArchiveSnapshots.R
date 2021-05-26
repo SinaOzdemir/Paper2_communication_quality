@@ -23,9 +23,8 @@ accounts$snapshots <- as.numeric(NA)
 
 # Extract archive.org data #####
 
-# for (i in 1:nrow(accounts)) {
-for (i in 1:10) {
-  
+for (i in 1:nrow(accounts)) {
+
   # Progress
   print(paste0("Account ", i, " of ", nrow(accounts),"; ", accounts$screen_name[i]))
   
