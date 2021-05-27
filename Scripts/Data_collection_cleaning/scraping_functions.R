@@ -210,16 +210,12 @@ data_binder<- function(data.path,case = c("EU","IO","UK","TWT")){
 }
 
 #these should still be applied with for loop for memory conservations
-twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,saveDIR = NULL){
+twitter_cleaner<- function(file,dim_even = F,prob_dim){
   #if the function will be used with an existing RDS on a local drive,
   #the function can read it now. User needs to provide full path to the file
-  if(isTRUE(read)){
-    twitter_data<- readRDS(file) %>% jsonlite::flatten()
-  }else{
-    #the function assumes that it will be used with an R object in the global env.
     
-    twitter_data <- file
-  }
+    twitter_data <- file %>% jsonlite::flatten()
+  
   
   
   #make the dimensions even----
@@ -306,70 +302,97 @@ twitter_rds_cleaner<- function(file,read = F,save = F,dim_even = F,prob_dim,save
     twitter_data["contains_media"]<-NA
   }
   #save modified rds----
-  if(isTRUE(save)){
-    #User needs to provide a save directory if 
-    #modified dataset needs to be saved
-    #!!!!IMPORTANT!!!
-    #The directory should not end with /
-    #otherwise the function will not save properly.
-    user_name<- twitter_data$author_id[1]
-    saveRDS(twitter_data,file = paste0(saveDIR,"/",user_name,".RDS"))
-  }else{
-    return(twitter_data)
-  }
+  
+  return(twitter_data)
+  
   #finally return the modified dataset.
   
 }
-analysis_vars<- c("tweet_id",
-                  "is_retweet",
-                  "retweet_status_id",
-                  "is_reply",
-                  "reply_to_status_id",
-                  "is_quote",
-                  "quoted_status_id",
-                  "contains_media",
-                  "tweet_mentioned_username",
-                  "tweet_hashtags",
-                  "tweet_created_at",
-                  "tweet_text",
-                  "tweet_lang",
-                  "tweet_public_metrics.retweet_count",
-                  "tweet_public_metrics.reply_count",
-                  "tweet_public_metrics.like_count",
-                  "tweet_public_metrics.quote_count",
-                  "author_id",
-                  "user_username",
-                  "user_name",
-                  "user_description",
-                  "user_created_at",
-                  "user_public_metrics.followers_count",
-                  "user_public_metrics.following_count",
-                  "user_public_metrics.tweet_count",
-                  "user_public_metrics.listed_count")
 
-
-
-twitter_rds_reader<- function(file_path, analysis_vars){
-  data<-readRDS(file_path)
-  #choose the important variables and
-  #make sure that everything is the same class
-  #I shouldn't have done this... only certain things should be character
-  # data <- data %>%
-  #   select(any_of(analysis_vars)) %>%
-  #   mutate(across(everything(),~as.character(.x)))
-
-  #recode nas in binaries
-  na_vars<- Hmisc::contents(object = data)[[1]] %>%
-    as_tibble(rownames = "var_names") %>% 
-    filter(NAs > 0) %>% 
-    pull(var_names) %>%
-    grep(pattern = "is_*",x = .,perl = T,value = T)
+twitter_rds_cleaner<-funtion(case = C("EU","IO","UK"),data_path){
   
-  data<-data %>% mutate(across(.cols = all_of(na_vars), ~replace_na(.x,0))) %>%
-    mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>% 
-    mutate(tweet_year = lubridate::floor_date(tweet_date,unit = "year"),
-           tweet_month = lubridate::floor_date(tweet_date, unit = "month"),
-           tweet_day = lubridate::floor_date(tweet_date, unit = "day"),
-           tweet_calendar_date = lubridate::wday(tweet_date,label = T))
-  return(data)
+  dirty_file_path<- paste0(data_path,case,"/rds/")
+  
+  files_to_clean<- list.files(dirty_file_path,"*.RDS",full.names = T)
+  
+  file_names<- list.files(dirty_file_path,"*.RDS") %>%
+    gsub("tweets_and_prof_info|.RDS","",x=.)
+  
+  prob_variables<-map2_dfr(.x = files_to_clean, .y = file_names, .f = meta_extra) %>% 
+    group_by(var.names) %>%
+    summarise(col_count = n()) %>%
+    filter(col_count < max(.$col_count)) %>% 
+    pull(var.names)
+  
+  
+  clean_rds_path <- make.dir(paste0(getwd(),"/data/",case,"/rds_clean/"))
+  
+  for (i in 1:length(files_to_clean)) {
+    print(paste0("cleaning and saving: ",file_names[i]))
+    clean_rds<-twitter_cleaner(file = files_to_clean[i],
+                               dim_even = T,
+                               prob_dim = prob_variables)
+    
+    saveRDS(object = clean_rds,file = paste0(clean_rds_path,file_names[i],".RDS"))
+    print(paste0("finished cleaning \n saving the clean file to: ",
+                 clean_rds_path,file_names[i],".RDS"))
+  }
+  
 }
+
+
+
+#deprecated#
+# analysis_vars<- c("tweet_id",
+#                   "is_retweet",
+#                   "retweet_status_id",
+#                   "is_reply",
+#                   "reply_to_status_id",
+#                   "is_quote",
+#                   "quoted_status_id",
+#                   "contains_media",
+#                   "tweet_mentioned_username",
+#                   "tweet_hashtags",
+#                   "tweet_created_at",
+#                   "tweet_text",
+#                   "tweet_lang",
+#                   "tweet_public_metrics.retweet_count",
+#                   "tweet_public_metrics.reply_count",
+#                   "tweet_public_metrics.like_count",
+#                   "tweet_public_metrics.quote_count",
+#                   "author_id",
+#                   "user_username",
+#                   "user_name",
+#                   "user_description",
+#                   "user_created_at",
+#                   "user_public_metrics.followers_count",
+#                   "user_public_metrics.following_count",
+#                   "user_public_metrics.tweet_count",
+#                   "user_public_metrics.listed_count")
+# 
+# 
+# 
+# twitter_rds_reader<- function(file_path, analysis_vars){
+#   data<-readRDS(file_path)
+#   #choose the important variables and
+#   #make sure that everything is the same class
+#   #I shouldn't have done this... only certain things should be character
+#   # data <- data %>%
+#   #   select(any_of(analysis_vars)) %>%
+#   #   mutate(across(everything(),~as.character(.x)))
+# 
+#   #recode nas in binaries
+#   na_vars<- Hmisc::contents(object = data)[[1]] %>%
+#     as_tibble(rownames = "var_names") %>% 
+#     filter(NAs > 0) %>% 
+#     pull(var_names) %>%
+#     grep(pattern = "is_*",x = .,perl = T,value = T)
+#   
+#   data<-data %>% mutate(across(.cols = all_of(na_vars), ~replace_na(.x,0))) %>%
+#     mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>% 
+#     mutate(tweet_year = lubridate::floor_date(tweet_date,unit = "year"),
+#            tweet_month = lubridate::floor_date(tweet_date, unit = "month"),
+#            tweet_day = lubridate::floor_date(tweet_date, unit = "day"),
+#            tweet_calendar_date = lubridate::wday(tweet_date,label = T))
+#   return(data)
+# }
