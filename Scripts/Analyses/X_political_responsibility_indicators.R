@@ -8,9 +8,7 @@ packs<- c("tidyverse","spacyr")
 pacman::p_load(char = packs)
 data.path<- paste0(getwd(),"/analysis_data/")
 ##################################
-#Need to track down a policy dictionary!
-# CAP and MIA datasets don't have their dictionaries online
-# I'll contact the primary authors.
+#Found the cap dictionary!
 ##################################
 
 
@@ -33,7 +31,40 @@ sandbox<- c(tweet1 = "The EU commission has concluded an investigation against P
             tweet2 ="Amazing organization. I attended the first TTNET high-level dialog conference",
             tweet3 ="ECB announced new measures against inflation",
             tweet4 ="After consultation with relevant stakeholders, we decided to stop vaccination purchases",
-            tweet5 ="This day coudln't get any beteter!I received my missoin letter to ensure our European way of life #EU#OurWay!! Great honor to be part of vdL")
+            tweet5 ="This day couldn't get any better!I received my mission letter to ensure our European way of life #EU#OurWay!! Great honor to be part of vdL")
+#get a feeling of the data structure after quanteda preprocessing:####
+library(quanteda)
+
+sandbox_corpus<- quanteda::corpus(sandbox)
+#might as well do some light cleaning here
+#still need to remove hashtags
+sandbox_dfm<- sandbox %>%
+  str_remove_all("[#][\\w_-]+") %>%
+  corpus(.,docnames = names(sandbox)) %>%
+  tokens(x = .,remove_punct = T,
+                     remove_symbols = T,
+                     remove_numbers = T,
+                     remove_url = T,
+                     remove_separators = T,) %>%
+   tokens_compound(.,
+                   phrase(c("European Union","EU commission")),
+                   case_insensitive = T) %>%tokens_tolower(.) %>% 
+  tokens_remove(.,stopwords("en")) %>%
+  tokens_wordstem(.,language = "en") %>% 
+  dfm()
+utils::download.file(url = "http://www.snsoroka.com/wp-content/uploads/2020/08/LTDjun2013.zip",destfile = "./dictionaries/LTDjun2013.zip")
+utils::unzip(zipfile = "./dictionaries/LTDjun2013.zip",exdir = "./dictionaries")
+file.remove("./dictionaries/LTDjun2013.zip")
+
+dict<- dictionary(file = "./dictionaries/LTDjun2013/policy_agendas_english.lcd")
+
+sandbox_policy <- sandbox_dfm %>%
+  dfm_lookup(x = .,dictionary = dict,case_insensitive = T,capkeys = T,verbose = T) %>% 
+  convert(.,to = "data.frame",docid_field = "tweet_id")
+
+# I should probably do some compounding here somewhere like EU commission etc
+
+
 #hunspell spell checking because spacy is extremely sensitive to typos####
 install.packages("hunspell")
 library(hunspell)
