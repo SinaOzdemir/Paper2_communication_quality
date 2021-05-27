@@ -52,94 +52,18 @@ data_binder(data.path = data_path, case = "TWT")
 
 
 # cleaning dfs: ---------------------------------------------------------------
-#I didn't fully functionalize rds cleaning to be more flexible
-#but wrote the script in a way that would work with "source" command
 
 #EU
 
-rds.path<- paste0(getwd(),"/data/EU/rds/")
-rds.files<- list.files(rds.path,"*.RDS",full.names = T)
-rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
-
-#lets see which columns are problematic:
-#if all the columns appear in equal number (i.e all the data is same dimension)
-#their count number should be the same
-
-prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
-  group_by(var.names) %>%
-  summarise(col_count = n()) %>%
-  filter(col_count < max(.$col_count)) %>% 
-  pull(var.names)
-
-
-#run the function on all data
-
-clean_rds_path<- paste0(getwd(),"/data/EU/rds_clean")
-for (i in 1:length(rds.files)){
-  twitter_rds_cleaner(file = rds.files[i],
-                      read = T,
-                      save = T,
-                      dim_even = T,
-                      prob_dim = prob_variables,
-                      saveDIR = clean_rds_path)
-}
+twitter_rds_cleaner(case = "EU", data_path = "./data/")
 
 #IO
 
-rds.path<- paste0(getwd(),"/data/IO/rds/")
-rds.files<- list.files(rds.path,"*.RDS",full.names = T)
-rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
-
-#lets see which columns are problematic:
-#if all the columns appear in equal number (i.e all the data is same dimension)
-#their count number should be the same
-
-prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
-  group_by(var.names) %>%
-  summarise(col_count = n()) %>%
-  filter(col_count < max(.$col_count)) %>% 
-  pull(var.names)
-
-
-#run the function on all data
-
-clean_rds_path<- paste0(getwd(),"/data/IO/rds_clean")
-for (i in 1:length(rds.files)){
-  twitter_rds_cleaner(file = rds.files[i],
-                      read = T,
-                      save = T,
-                      dim_even = T,
-                      prob_dim = prob_variables,
-                      saveDIR = clean_rds_path)
-}
+twitter_rds_cleaner(case = "IO", data_path = "./data/")
 
 #UK
 
 
-rds.path<- paste0(getwd(),"/data/UK/rds/")
-rds.files<- list.files(rds.path,"*.RDS",full.names = T)
-rds.file.names<- list.files(rds.path,"*.RDS") %>% gsub("tweets_and_prof_info|.RDS","",x = .)
+twitter_rds_cleaner(case = "UK", data_path = "./data/")
 
-#lets see which columns are problematic:
-#if all the columns appear in equal number (i.e all the data is same dimension)
-#their count number should be the same
-
-prob_variables<-map2_dfr(.x = rds.files, .y = rds.file.names, .f = meta_extra) %>%
-  group_by(var.names) %>%
-  summarise(col_count = n()) %>%
-  filter(col_count < max(.$col_count)) %>% 
-  pull(var.names)
-
-
-#run the function on all data
-
-clean_rds_path<- paste0(getwd(),"/data/UK/rds_clean")
-for (i in 1:length(rds.files)){
-  twitter_rds_cleaner(file = rds.files[i],
-                      read = T,
-                      save = T,
-                      dim_even = T,
-                      prob_dim = prob_variables,
-                      saveDIR = clean_rds_path)
-}
-
+#TWT data is already clean.
