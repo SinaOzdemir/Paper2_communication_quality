@@ -359,4 +359,52 @@ corpus <- left_join(corpus, langinfo, by = "id")
 # Export 
 write_rds(corpus, "./data/corpii/IO_corpus_cleaned.RDS")
 
-Sys.time()
+
+
+# # UK Tweets ####
+# 
+# # Corpus
+# corpus <- read_rds("./data/corpii/UK_corpus.RDS")
+# 
+# # Sample for testing purposes
+# # corpus <- corpus %>% sample_n(3000)
+# 
+# # Clean texts
+# corpus$textclean <- cleanTweetTexts(corpus$text)
+# 
+# # Emojis
+# corpus$emojicount <- detectTweetEmojis(corpus$text, countEmojis = T)
+# corpus$emojis <- detectTweetEmojis(corpus$text, countEmojis = F)
+# 
+# # Language detection and cleaning
+# corpus$id <- 1:nrow(corpus) # Establish unique id
+# langinfo <- detectTweetLanguages(corpus) # Extract language info
+# corpus <- left_join(corpus, langinfo, by = "id")
+# 
+# # Export 
+# write_rds(corpus, "./data/corpii/UK_corpus_cleaned.RDS")
+# 
+# 
+# 
+# # TWT Tweets ####
+# 
+# # Corpus
+# corpus <- read_rds("./data/corpii/TWT_corpus.RDS")
+# 
+# # Sample for testing purposes
+# # corpus <- corpus %>% sample_n(3000)
+# 
+# # Clean texts
+# corpus$textclean <- cleanTweetTexts(corpus$text)
+# 
+# # Emojis
+# corpus$emojicount <- detectTweetEmojis(corpus$text, countEmojis = T)
+# corpus$emojis <- detectTweetEmojis(corpus$text, countEmojis = F)
+# 
+# # Language detection and cleaning
+# corpus$id <- 1:nrow(corpus) # Establish unique id
+# langinfo <- detectTweetLanguages(corpus) # Extract language info
+# corpus <- left_join(corpus, langinfo, by = "id")
+# 
+# # Export 
+# write_rds(corpus, "./data/corpii/TWT_corpus_cleaned.RDS")
