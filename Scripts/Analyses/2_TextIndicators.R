@@ -1,7 +1,7 @@
 ########################################################
 # Project:    EU Tweet
 # Task:       Extract language-based indicators 
-# Author:     Christian Rauh (03.05.2021)
+# Author:     Christian Rauh (28.05.2021)
 ########################################################
 
 
