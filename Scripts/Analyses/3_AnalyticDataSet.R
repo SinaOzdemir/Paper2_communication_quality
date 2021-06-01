@@ -40,7 +40,7 @@ harmonizeAnalytics <- function(corpus = data.frame(0)) {
   # External urls and media #
   print("Extracting urls and media types from tweet data. This takes some time!")
   
-  # Raget variables
+  # Target variables
   corpus$urls <- NA
   corpus$mediaurls <- NA
   corpus$exturls <- NA

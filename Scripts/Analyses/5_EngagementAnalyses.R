@@ -9,6 +9,8 @@
 library(tidyverse) # 1.3.0
 library(patchwork) # 1.1.1
 library(scales) # 1.1.1
+library(corrgram) 
+library(coefplot)
 library(margins)
 
 
@@ -28,6 +30,10 @@ tweets$nphotos[is.na(tweets$nphotos)] <- 0 # there were just none
 tweets$nvideos[is.na(tweets$nvideos)] <- 0 # there were just none
 tweets$ntube[is.na(tweets$ntube)] <- 0 # there were just none
 tweets$lsd[!tweets$en_av] <- NA # If there was no english text, sentiment score is missing, not 0
+
+tweets$nmentions <- as.integer(tweets$nmentions)
+tweets$nhashtags <- as.integer(tweets$nhashtags)
+
 
 # Mark original (self-authored) tweets
 # excluding retweets and quotes
@@ -55,6 +61,8 @@ fcounts <- read_rds("./analysis_data/FollowerCountsInterpolated_EU.RDS") %>%
 
 tweets <- tweets %>% left_join(fcounts, by = c("screen_name", "day"))
 sum(is.na(tweets$follower_count_interpolated))
+
+# tweets$follower_count_interpolated[tweets$follower_count_interpolated == 0] <- 1 # Prevent infinite reatios, we interpolated from 0
 
 tweets$like_ratio <- tweets$like_count/tweets$follower_count_interpolated
 tweets$retweet_ratio <- tweets$retweet_count/tweets$follower_count_interpolated
@@ -88,9 +96,15 @@ t.breaks <- t.breaks[ ,1]  # Atomic vector
 t.labels <- str_remove(t.breaks, "-01")  
 
 
+# Targeted data
+# Only original tweets, excluding May 2021 
+# (as we have only three days here, idicating drops just due to the incomplete month)
+df.enga <- tweets %>% filter(original) %>% filter(day < as.Date("2021-05-01", format = "%Y-%m-%d"))
+
+
 # Likes
 pl.like_count <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = like_count, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = like_count, color = personal, group = personal)) +
   stat_summary(geom = "line", fun = "mean", ) +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_colour_manual(values = c("#003399", "#1da1f2"), labels = c("institutional", "personal")) +
@@ -104,7 +118,7 @@ pl.like_count <-
         legend.title = element_text(size= 10))
 
 pl.like_ratio <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = like_ratio, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = like_ratio, color = personal, group = personal)) +
   stat_smooth() +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
@@ -122,7 +136,7 @@ pl.like_ratio <-
 
 # Retweets
 pl.retweet_count <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = retweet_count, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = retweet_count, color = personal, group = personal)) +
   stat_summary(geom = "line", fun = "mean", ) +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_colour_manual(values = c("#003399", "#1da1f2"), labels = c("institutional", "personal")) +
@@ -131,7 +145,7 @@ pl.retweet_count <-
        y = "")
 
 pl.retweet_ratio <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = retweet_ratio, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = retweet_ratio, color = personal, group = personal)) +
   stat_smooth() +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
@@ -144,7 +158,7 @@ pl.retweet_ratio <-
 
 # Quotes
 pl.quote_count <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = quote_count, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = quote_count, color = personal, group = personal)) +
   stat_summary(geom = "line", fun = "mean", ) +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_colour_manual(values = c("#003399", "#1da1f2"), labels = c("institutional", "personal")) +
@@ -153,7 +167,7 @@ pl.quote_count <-
        y = "")
 
 pl.quote_ratio <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = quote_ratio, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = quote_ratio, color = personal, group = personal)) +
   stat_smooth() +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
@@ -166,7 +180,7 @@ pl.quote_ratio <-
 
 # Replies
 pl.reply_count <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = reply_count, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = reply_count, color = personal, group = personal)) +
   stat_summary(geom = "line", fun = "mean", ) +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_colour_manual(values = c("#003399", "#1da1f2"), labels = c("institutional", "personal")) +
@@ -175,7 +189,7 @@ pl.reply_count <-
        y = "")
 
 pl.reply_ratio <-
-  ggplot(tweets[tweets$original, ], aes(x = month, y = reply_ratio, color = personal, group = personal)) +
+  ggplot(df.enga, aes(x = month, y = reply_ratio, color = personal, group = personal)) +
   stat_smooth() +
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
@@ -196,21 +210,207 @@ pl.engagement_ratio <-
   (pl.quote_ratio+pl.reply_ratio)
 ggsave("./plots/UserEngagement/UserEngagementOverTimeRatio.png", plot = pl.engagement_ratio, width = 20, height = 20, units = "cm")
 
+# Clean up
+rm(df.enga)
+rm(list=ls(pattern="pl."))
+gc()
 
 
 
 
+# Mutlivariate regression - tweet level ####
 
-# Regression model data ####
-
+# Targeted data set
 df <- tweets %>% 
   filter(original) %>% # Only self-authored tweets
   select(id, screen_name, day, # ID markers for residual analysis
-         like_count, retweet_count, quote_count, reply_count, # DVs: engagement rates
+         like_ratio, retweet_ratio, quote_ratio, reply_ratio, # DVs: engagement rates
          emojicount, pic, video, url, # IVs: Media
          nmentions, nhashtags, # IVs: Responsiveness
          flesch, familiarity, verbal, lsd, # IVs: Language 
          personal) %>% # IV: Personal account
+  mutate_if(is.numeric, list(~na_if(., Inf))) %>% # Replace infinite values with NAs - INSPECT - 8000 cases
+  mutate_if(is.numeric, list(~na_if(., -Inf))) %>% # Mostly cases with interpolated follower count == 0 or n_noun == 0
   filter(complete.cases(.)) # Keep only complete cases, mainly drops tweets without english content
 
+
+# Outliers
+# 'Viral' tweets that created more engagement than followers
+like.outliers <- df %>%  filter(like_ratio > 1)
+retweet.outliers <- df %>%  filter(retweet_ratio > 1)
+quote.outliers <- df %>%  filter(quote_ratio > 1)
+reply.outliers <- df %>%  filter(reply_ratio > 1)
+
+outlier.ids <- c(like.outliers$id,
+                     retweet.outliers$id,
+                     quote.outliers$id,
+                     reply.outliers$id) %>% 
+  as.data.frame() %>% 
+  rename(id = 1) %>% 
+  group_by(id) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+# Inspect and save
+# raw <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>% 
+#   filter(id %in% outlier.ids$id)
+# write_rds(raw, "./analysis_data/UnusualEngagementCases.RDS")
+# rm(raw)
+
+
+# Drop outliers from regression data
+# NB!
+df <- df %>% filter(!(id %in% outlier.ids$id))
+
+
+# Store SDs of numeric variables 
+# for coefficient interpretation later
+sds <- df %>% 
+  select(c(like_ratio, retweet_ratio, quote_ratio, reply_ratio,
+           emojicount,
+           nmentions, nhashtags,
+           flesch, familiarity, verbal, lsd)) %>% 
+  summarise(across(everything() , sd)) %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  rownames_to_column() %>% 
+  rename(SD = 1,
+         variable = 2)
+
+
+# Look at DV distributions
+dvs <- df %>% select(c(like_ratio, retweet_ratio, quote_ratio, reply_ratio))
+cors <- round(cor(dvs), 1) # Correlation matrix
+
+png(file="./plots/UserEngagement/EngagementRatioDistributions.png",
+    width=600, height=600)
+corrgram(dvs, # Takes some time
+         main = "Distributions of engagement indicators",
+         lower.panel=panel.pts, upper.panel=panel.conf,
+         diag.panel=panel.density)
+dev.off()
+
+# Ugly ! Extremely skewed and overdispersed - seems to call for Poisson or negative binomial
+
+apply(dvs, 2, mean) # Means
+apply(dvs, 2, var) # Variances
+
+# Overdispersion (against normal), not dramatic at first sight, but still skew and possible zero-inflation
+
+
+# Look at IV distributions
+ivs <- df %>% select(8:18)
+png(file="./plots/UserEngagement/IvDistributions.png",
+    width=1200, height=1200)
+corrgram(ivs, # Takes some time
+         main = "Distributions of independent variables",
+         lower.panel=panel.pts, upper.panel=panel.conf,
+         diag.panel=panel.density)
+dev.off()
+
+# Why the heck are hastag and mention counts perfectly correlated???
+# In analytic data set creation i lokks godd (line 28 ff)
+
+
+
+# Crudely linear models ####
+
+# Scale numeric variables
+# Want to see standardized coeffcients for a start
+dfs <- df %>% 
+  mutate_at(c("like_ratio", "retweet_ratio", "quote_ratio", "reply_ratio",
+              "emojicount",
+              "nmentions", "nhashtags",
+              "flesch", "familiarity", "verbal", "lsd",
+              "pic", "video", "url", "personal"), # Dummies as well??? To compare effect sizes ...
+            scale)
+mean(dfs$like_ratio) # Sanity check
+sd(dfs$like_ratio) # Sanity check
+
+
+
+# Main Model formula
+regform <- "personal + pic + video + emojicount + url + nmentions + nhashtags + flesch + familiarity + verbal + lsd"
+
+
+# Regressions 
+
+likeform <- paste0("like_ratio ~ ", regform)
+like.fit <- lm(formula = likeform, data = dfs)
+like.coef <- coefplot(like.fit, plot = F) %>% 
+  mutate(Model = "Like ratio")
+
+retweetform <- paste0("retweet_ratio ~ ", regform)
+retweet.fit <- lm(formula = retweetform, data = dfs)
+retweet.coef <- coefplot(retweet.fit, plot = F) %>% 
+  mutate(Model = "Retweet ratio")
+
+quoteform <- paste0("quote_ratio ~ ", regform)
+quote.fit <- lm(formula = quoteform, data = dfs)
+quote.coef <- coefplot(quote.fit, plot = F) %>% 
+  mutate(Model = "Quote ratio")
+
+replyform <- paste0("reply_ratio ~ ", regform)
+reply.fit <- lm(formula = replyform, data = dfs)
+reply.coef <- coefplot(reply.fit, plot = F) %>% 
+  mutate(Model = "Reply ratio")
+
+# Combine and clean coefficient info
+
+coefs <- rbind(like.coef,
+               retweet.coef,
+               quote.coef,
+               reply.coef) %>% 
+  mutate(Coefficient = str_remove(Coefficient, "TRUE"), # Clean Dummy names
+         Coefficient = str_replace_all(Coefficient, fixed("(Intercept)"), "Intercept")) %>% 
+  filter(Coefficient != "Intercept") # Perfectly 0 for full standardization anyway
+
+coefs$Model <- factor(coefs$Model, levels = c("Like ratio", "Retweet ratio", "Reply ratio", "Quote ratio"))
+
+coefs$name <- NA
+coefs$name[coefs$Coefficient == "emojicount"] <- "Number of\nemojis/symbols"
+coefs$name[coefs$Coefficient == "video"] <- "Embedded video"
+coefs$name[coefs$Coefficient == "pic"] <- "Embedded picture"
+coefs$name[coefs$Coefficient == "url"] <- "External link"
+coefs$name[coefs$Coefficient == "nmentions"] <- "Number of\n@user mentions"
+coefs$name[coefs$Coefficient == "nhashtags"] <- "Number of\n#hashtags"
+coefs$name[coefs$Coefficient == "flesch"] <- "Flesch/Kincaid\nreading ease"
+coefs$name[coefs$Coefficient == "familiarity"] <- "Familiarity\nof words"
+coefs$name[coefs$Coefficient == "verbal"] <- "Verbal style"
+coefs$name[coefs$Coefficient == "lsd"] <- "Sentiment\n(Lexicoder)"
+coefs$name[coefs$Coefficient == "personal"] <- "Personal\naccount"
+
+coefs$name2 <- factor(coefs$name, 
+                      levels = c("Number of\n@user mentions", "Number of\n#hashtags", "Number of\nemojis/symbols",
+                                 "Embedded picture", "Embedded video", "External link",
+                                 "Flesch/Kincaid\nreading ease", "Familiarity\nof words", "Verbal style", "Sentiment\n(Lexicoder)",
+                                 "Personal\naccount"))
+
+# Plot results
+
+theme_set(theme_light())
+
+ggplot(coefs, aes(y = name2, color = Model))+
+  geom_vline(xintercept = 0, linetype = "dashed")+
+  geom_linerange(aes(xmin = LowOuter, xmax = HighOuter), size = .5, position = position_dodge(width = .7)) +
+  geom_linerange(aes(xmin = LowInner, xmax = HighInner), size = 1, position = position_dodge(width = .7)) +
+  geom_point(aes(x = Value), position = position_dodge(width = .7))+
+  scale_colour_manual(values = c("red", "green", "blue", "gray30"))+
+  geom_hline(yintercept = c(seq(1.5, 10.5, 1)), color = "gray70")+
+  labs(title = "Linear regression models of user engagement",
+       subtitle = paste("Based on", nrow(dfs), "tweets of\npersonal and institutional accounts of supranational EU actors"),
+       x = "\nStandardized effect",
+       y = "Tweet\ncharacteristics\n",
+       color = "Engagement indicator: ")+
+  theme(legend.position='bottom', 
+        axis.text = element_text(color = "black"),
+        plot.title = element_text(size=14, face = "bold"),
+        panel.grid.minor = element_line(),
+        panel.grid.major.y = element_blank(),
+        axis.text.x = element_text(angle = 0),
+        axis.text.y = element_text(face = "bold"))
+
+ggsave("./plots/UserEngagement/OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
+
+  
 
