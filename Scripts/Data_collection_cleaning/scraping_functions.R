@@ -26,7 +26,7 @@ make.dir<- function(file.path){
   if(dir.exists(file.path)){
     return(file.path)
   }else{
-    dir.create(path = file.path)
+    dir.create(path = file.path, recursive = T)
     return(file.path)
   }
 }
@@ -140,7 +140,7 @@ twitter_json_scraper<- function(accounts,#provide account handles
     account_handles<- account_meta_data %>% pull(screen_name)
   }
   
-    
+  case_path<- make.dir(paste0(data_path,"/",case,"/","json/"))
   for (i in 1:length(account_handles)) {
     print(paste0("getting data for ", account_handles[i]," at ",Sys.time()))
     
@@ -154,13 +154,12 @@ twitter_json_scraper<- function(accounts,#provide account handles
     
     data_end_date <- paste0(Sys.Date(),"T00:00:00Z")
     
-    data.path<- make.dir(paste(data.folder,case,"json",account_handles[i],sep = "/"))
+    data.path<- paste0(case_path,account_handles[i],"/")
     
     tweets<- academictwitteR::get_user_tweets(users = account_handles[i],
                                               start_tweets = data_start_date,
                                               end_tweets = data_end_date,
                                               bearer_token = bearer_token,
-                                              bind_tweets = F,
                                               data_path = data.path)
     
     
@@ -309,7 +308,7 @@ twitter_cleaner<- function(file,dim_even = F,prob_dim){
   
 }
 
-twitter_rds_cleaner<-funtion(case = C("EU","IO","UK"),data_path){
+twitter_rds_cleaner<-function(case = C("EU","IO","UK"),data_path){
   
   dirty_file_path<- paste0(data_path,case,"/rds/")
   

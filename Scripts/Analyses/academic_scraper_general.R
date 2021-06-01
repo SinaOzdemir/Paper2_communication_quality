@@ -3,35 +3,45 @@
 source(file = paste0(getwd(),"/Scripts/Data_collection_cleaning/scraping_functions.R"))
 data_path<- paste0(getwd(),"/data")
 #for twitter api
-bearer_token <- "$BEARER"
-api_v1_token <- rtweet::create_token(app = "$appname",
-                                     consumer_key = "$consumer_key",
-                                     consumer_secret = "$consumer_secret_key",
-                                     access_token = "$access_token",
-                                     access_secret = "$access_secret_key",
-                                     set_renv = F)
-user_names<- readRDS(file.choose())
+bearer_token <- "AAAAAAAAAAAAAAAAAAAAANh3NgEAAAAAYpb57mP0saX5D%2BCi4vfCvf%2FWp6Q%3DD6xFxcFGBkLGz0BWs6f4EylxpdxEeLIpLk867py48blqPVwQUm"
+api_v1_token <- rtweet::create_token(app = "Functionised_collector",
+                                    consumer_key = "c0wODdFRKzNDz23l7O9A6GBig",
+                                    consumer_secret = "uwraekdxEX2BaVZSNLw7sjkVbq3wNRByYYiOolHrYaikqZHKUW",
+                                    access_token = "1151438784384421888-eas7PxAdeoohUCykI5XeX2Wc2lppjl",
+                                    access_secret = "96TaBIVuZXlpICK2QAP7IurCFuYPfHSUbXYUTTSRak3gr",
+                                    set_renv = F)
+
 
 # scrape the tweets ------------------------------------------------
 
 #scrape EU tweets
+eu_user_names<- readRDS(file.choose())
+
 twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
                      bearer_token = bearer_token,
                      account_look_up = T,
                      data.folder = data_path,case = "EU")
 
 #Scrape IO tweets
-twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+
+io_user_names<- readxl::read_excel("./data/Accounts/io_accounts.xlsx",sheet = 1,na = c(" ",""))
+twitter_json_scraper(accounts = user_names,
+                     token_v1 = api_v1_token,
                      bearer_token = bearer_token,
                      account_look_up = T,
                      data.folder = data_path,case = "IO")
 
-#Scraoe UK tweets:
+#Scrape UK tweets:
 
-twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
+uk_user_names<- readxl::read_excel(path = "./data/Accounts/uk_accounts.xlsx",sheet = 1, na= c(" ","")) %>% 
+  pull(twitter_handle)
+
+twitter_json_scraper(accounts = uk_user_names,
+                     token_v1 = api_v1_token,
                      bearer_token = bearer_token,
                      account_look_up = T,
-                     data.folder = data_path,case = "UK")
+                     data.folder = data_path,
+                     case = "UK")
 
 #scrape random tweets:
 
