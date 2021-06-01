@@ -23,7 +23,7 @@ tweets <- read_rds("./data/AnalyticData_AllSamples.RDS")
 # tweets <- tweets %>% sample_n(10000)
 
 # Correct some coding nuissances
-# Probably corect downstream!
+# Probably correct downstream!
 tweets$nexturl[is.na(tweets$nexturl)] <- 0 # there were just none
 tweets$nphotos[is.na(tweets$nphotos)] <- 0 # there were just none
 tweets$nvideos[is.na(tweets$nvideos)] <- 0 # there were just none
