@@ -117,7 +117,7 @@ collectAccountInfo <- function(actor.type = character(0)) {
     # and follow naming conventions of corpus
     
     current <- current %>% 
-      select(author_id, starts_with("user_")) %>% 
+      select(author_id, matches("user_|profile_")) %>% 
       unique() %>% 
       rename(screen_name = user_username,
              userid = author_id) %>% 
@@ -159,12 +159,17 @@ write_rds(accounts, "./analysis_data/IO_account_list.RDS")
 rm(accounts)
 
 
-# # UK tweets ####
-# 
-# corp <- buildTweetCorpus("UK")
-# write_rds(corp, "./data/corpii/UK_corpus.RDS")
-# rm(corp)
-# 
+# UK tweets ####
+
+corp <- buildTweetCorpus("UK")
+write_rds(corp, "./data/corpii/UK_corpus.RDS")
+rm(corp)
+
+accounts <- collectAccountInfo("UK")
+write_rds(accounts, "./analysis_data/UK_account_list.RDS")
+rm(accounts)
+
+
 # accounts <- collectAccountInfo("IO")
 # write_rds(accounts, "./analysis_data/UK_account_list.RDS")
 # rm(accounts)
