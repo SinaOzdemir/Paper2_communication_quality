@@ -33,10 +33,11 @@ twitter_json_scraper(accounts = user_names,
 
 #Scrape UK tweets:
 
-uk_user_names<- readxl::read_excel(path = "./data/Accounts/uk_accounts.xlsx",sheet = 1, na= c(" ","")) %>% 
+uk_user_names<- readxl::read_excel(path = "./data/Accounts/uk_accounts.xlsx",sheet = 1, na= c(" ","")) %>%
+  select(name:institutional_affiliation) %>% drop_na() %>% 
   pull(twitter_handle)
 
-twitter_json_scraper(accounts = uk_user_names,
+twitter_json_scraper(accounts = uk_user_names[152:201],
                      token_v1 = api_v1_token,
                      bearer_token = bearer_token,
                      account_look_up = T,

@@ -40,6 +40,28 @@ meta_extra <- function(file_path,file_names){
   return(b)
 }
 
+bind_jsons<- function(file_path,what =c("user","data")){
+  if(what == "data"){
+    file_pattern <- "data_*"
+  }else if (what == "user") {
+    file_pattern <- "user_*"
+    
+  }else{
+    stop("please specify what to bind: user or data")
+  }
+  
+  json_files<- list.files(path = file_path,pattern = file_pattern,full.names = T)
+  
+  binded_json<- data.frame()
+  for (i in 1:length(json_files)) {
+    print(paste0("binding ", what, " jsons"))
+    a <- jsonlite::fromJSON(txt = json_files[i])
+    binded_json<- rbind(binded_json,a)
+    
+  }
+  return(binded_json)
+}
+
 
 # twitter scrapers --------------------------------------------------------
 
@@ -187,10 +209,14 @@ data_binder<- function(data.path,case = c("EU","IO","UK","TWT")){
   
   for (i in 1:length(json_files)) {
     json_case_data<- paste0(json_files[i],"/")
-    tweet_data<- academictwitteR::bind_tweet_jsons(json_case_data)
-    tweet_vars<- colnames(tweet_data)[-whcih(colnames(tweet_data)%in%"author_id")]<-paste("tweet",tweet_vars,sep = "_")
+    
+    tweet_data<- bind_jsons(file_path = json_case_data,what = "data")
+    
+    tweet_vars<- colnames(tweet_data)[-which(colnames(tweet_data)%in%"author_id")]<-paste("tweet",tweet_vars,sep = "_")
+    
     user<- tweet_data$author_id[1]
-    user_data<- academictwitteR::bind_user_jsons(json_case_data) %>% 
+    
+    user_data<- bind_jsons(file_path = json_case_data, what = "user") %>% 
       filter(id == user) %>% sample_n(size = 1)
     
     user_vars<- colnames(user_data)[-which(colnames(user_data)%in%"author_id")]
