@@ -31,38 +31,6 @@ make.dir<- function(file.path){
   }
 }
 
-meta_extra <- function(file_path,file_names){
-  a <- readRDS(file = file_path) %>% jsonlite::flatten()
-  b <- Hmisc::contents(a)[[1]] %>%
-    as_tibble(rownames = "var.names") %>% 
-    mutate(screen_name = rep(file_names, times = nrow(.))) %>%
-    select(-any_of("NAs"))
-  return(b)
-}
-
-bind_jsons<- function(file_path,what =c("user","data")){
-  if(what == "data"){
-    file_pattern <- "data_*"
-  }else if (what == "user") {
-    file_pattern <- "user_*"
-    
-  }else{
-    stop("please specify what to bind: user or data")
-  }
-  
-  json_files<- list.files(path = file_path,pattern = file_pattern,full.names = T)
-  
-  binded_json<- data.frame()
-  for (i in 1:length(json_files)) {
-    print(paste0("binding ", what, " jsons"))
-    a <- jsonlite::fromJSON(txt = json_files[i])
-    binded_json<- rbind(binded_json,a)
-    
-  }
-  return(binded_json)
-}
-
-
 # twitter scrapers --------------------------------------------------------
 
 twitter_json_scraper<- function(accounts,#provide account handles
@@ -193,6 +161,65 @@ twitter_json_scraper<- function(accounts,#provide account handles
 # data cleaners -----------------------------------------------------------
 
 #data binder
+
+
+meta_extra <- function(file_path,file_names){
+  
+  if(grepl(x = file.path,pattern = ".json",fixed = T)){
+    a<- jsonlite::fromJSON(txt = file_path,flatten = T)
+  }else{
+    a <- readRDS(file = file_path) %>% jsonlite::flatten()
+    
+  }
+  b <- Hmisc::contents(a)[[1]] %>%
+    as_tibble(rownames = "var.names") %>% 
+    mutate(screen_name = rep(file_names, times = nrow(.))) %>%
+    select(-any_of("NAs"))
+  return(b)
+}
+
+bind_jsons<- function(file_path,what =c("user","data")){
+  if(what == "data"){
+    file_pattern <- "data_*"
+  }else if (what == "user") {
+    file_pattern <- "user_*"
+    
+  }else{
+    stop("please specify what to bind: user or data")
+  }
+  
+  
+  json_files<- list.files(path = file_path,pattern = file_pattern,full.names = T)
+  json_file_names<- list.files(path = file_path, pattern= file_pattern, full.names = F)
+  
+  
+  prob_variables<-map2_dfr(.x = json_files, .y = json_file_names, .f = meta_extra) %>% 
+    group_by(var.names) %>%
+    summarise(col_count = n()) %>%
+    filter(col_count < max(.$col_count)) %>% 
+    pull(var.names)
+  
+  
+  binded_json<- data.frame()
+  for (i in 1:length(json_files)) {
+    print(paste0("binding ", what, " jsons"))
+    a <- jsonlite::fromJSON(txt = json_files[i],flatten = F)
+    
+    missing<- ifelse(prob_variables%in%colnames(a),1,0)
+    
+    missing_cols<-cbind(prob_variables,missing) %>%
+      as.data.frame() %>%
+      filter(missing == 0 ) %>%
+      pull(prob_variables)
+    
+    a[missing_cols]<-NA
+    
+    binded_json<- rbind(binded_json,a)
+    
+  }
+  return(binded_json)
+}
+
 
 data_binder<- function(data.path,case = c("EU","IO","UK","TWT")){
   
@@ -366,58 +393,3 @@ twitter_rds_cleaner<-function(case = C("EU","IO","UK"),data_path){
 }
 
 
-
-#deprecated#
-# analysis_vars<- c("tweet_id",
-#                   "is_retweet",
-#                   "retweet_status_id",
-#                   "is_reply",
-#                   "reply_to_status_id",
-#                   "is_quote",
-#                   "quoted_status_id",
-#                   "contains_media",
-#                   "tweet_mentioned_username",
-#                   "tweet_hashtags",
-#                   "tweet_created_at",
-#                   "tweet_text",
-#                   "tweet_lang",
-#                   "tweet_public_metrics.retweet_count",
-#                   "tweet_public_metrics.reply_count",
-#                   "tweet_public_metrics.like_count",
-#                   "tweet_public_metrics.quote_count",
-#                   "author_id",
-#                   "user_username",
-#                   "user_name",
-#                   "user_description",
-#                   "user_created_at",
-#                   "user_public_metrics.followers_count",
-#                   "user_public_metrics.following_count",
-#                   "user_public_metrics.tweet_count",
-#                   "user_public_metrics.listed_count")
-# 
-# 
-# 
-# twitter_rds_reader<- function(file_path, analysis_vars){
-#   data<-readRDS(file_path)
-#   #choose the important variables and
-#   #make sure that everything is the same class
-#   #I shouldn't have done this... only certain things should be character
-#   # data <- data %>%
-#   #   select(any_of(analysis_vars)) %>%
-#   #   mutate(across(everything(),~as.character(.x)))
-# 
-#   #recode nas in binaries
-#   na_vars<- Hmisc::contents(object = data)[[1]] %>%
-#     as_tibble(rownames = "var_names") %>% 
-#     filter(NAs > 0) %>% 
-#     pull(var_names) %>%
-#     grep(pattern = "is_*",x = .,perl = T,value = T)
-#   
-#   data<-data %>% mutate(across(.cols = all_of(na_vars), ~replace_na(.x,0))) %>%
-#     mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>% 
-#     mutate(tweet_year = lubridate::floor_date(tweet_date,unit = "year"),
-#            tweet_month = lubridate::floor_date(tweet_date, unit = "month"),
-#            tweet_day = lubridate::floor_date(tweet_date, unit = "day"),
-#            tweet_calendar_date = lubridate::wday(tweet_date,label = T))
-#   return(data)
-# }

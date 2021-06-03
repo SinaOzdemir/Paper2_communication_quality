@@ -56,6 +56,8 @@ twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
 
 # bind user data and tweet data together in RDS -------------------------------------------------------------------
 
+#I had to move evening the data dimension evening here
+
 data_binder(data.path = data_path,case = "EU")
 data_binder(data.path = data_path,case = "IO")
 data_binder(data.path = data_path,case = "UK")
