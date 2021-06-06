@@ -160,131 +160,53 @@ twitter_json_scraper<- function(accounts,#provide account handles
 
 # data cleaners -----------------------------------------------------------
 
-#data binder
 
-
-meta_extra <- function(file_path,file_names){
+meta_extra <- function(file_path){
+  is_json<- grepl(x = file_path,pattern = ".json", fixed = T)
   
-  if(grepl(x = file.path,pattern = ".json",fixed = T)){
-    a<- jsonlite::fromJSON(txt = file_path,flatten = T)
-  }else{
-    a <- readRDS(file = file_path) %>% jsonlite::flatten()
+    if(isTRUE(is_json)){
+      a<- jsonlite::fromJSON(txt = file_path,flatten = T)%>% as.data.frame()
+    }else{
+      a <- readRDS(file = file_path) %>% jsonlite::flatten()
+      
+    }
+    b <- Hmisc::contents(a)[[1]] %>%
+      as_tibble(rownames = "var.names") %>% 
+      select(-any_of("NAs"))
+    return(b)
     
-  }
-  b <- Hmisc::contents(a)[[1]] %>%
-    as_tibble(rownames = "var.names") %>% 
-    mutate(screen_name = rep(file_names, times = nrow(.))) %>%
-    select(-any_of("NAs"))
-  return(b)
-}
-
-bind_jsons<- function(file_path,what =c("user","data")){
-  if(what == "data"){
-    file_pattern <- "data_*"
-  }else if (what == "user") {
-    file_pattern <- "user_*"
-    
-  }else{
-    stop("please specify what to bind: user or data")
-  }
   
-  
-  json_files<- list.files(path = file_path,pattern = file_pattern,full.names = T)
-  json_file_names<- list.files(path = file_path, pattern= file_pattern, full.names = F)
-  
-  
-  prob_variables<-map2_dfr(.x = json_files, .y = json_file_names, .f = meta_extra) %>% 
-    group_by(var.names) %>%
-    summarise(col_count = n()) %>%
-    filter(col_count < max(.$col_count)) %>% 
-    pull(var.names)
-  
-  
-  binded_json<- data.frame()
-  for (i in 1:length(json_files)) {
-    print(paste0("binding ", what, " jsons"))
-    a <- jsonlite::fromJSON(txt = json_files[i],flatten = F)
-    
-    missing<- ifelse(prob_variables%in%colnames(a),1,0)
-    
-    missing_cols<-cbind(prob_variables,missing) %>%
-      as.data.frame() %>%
-      filter(missing == 0 ) %>%
-      pull(prob_variables)
-    
-    a[missing_cols]<-NA
-    
-    binded_json<- rbind(binded_json,a)
-    
-  }
-  return(binded_json)
 }
 
 
-data_binder<- function(data.path,case = c("EU","IO","UK","TWT")){
-  
-  if(case == "TWT"){
-    file_path<- paste(data.path,case,sep = "/")
-    rds_files<-list.files(path = file_path,pattern = "*.RDS",full.names = T)
-    rds<- purrr::map_dfr(rds_files,readRDS)
-    saveRDS(rds,file = paste0(file_path,"random_tweets.RDS"))
-  }else{
-  
-  json_directory<- paste(data.path,case,"json",sep = "/")
-  json_files<- list.dirs(path = json_directory,full.names = T,recursive = F)
-  case_names<- list.dirs(path = json_directory,full.names = F,recursive = F)
-  
-  for (i in 1:length(json_files)) {
-    json_case_data<- paste0(json_files[i],"/")
-    
-    tweet_data<- bind_jsons(file_path = json_case_data,what = "data")
-    
-    tweet_vars<- colnames(tweet_data)[-which(colnames(tweet_data)%in%"author_id")]<-paste("tweet",tweet_vars,sep = "_")
-    
-    user<- tweet_data$author_id[1]
-    
-    user_data<- bind_jsons(file_path = json_case_data, what = "user") %>% 
-      filter(id == user) %>% sample_n(size = 1)
-    
-    user_vars<- colnames(user_data)[-which(colnames(user_data)%in%"author_id")]
-    colnames(user_data)
-    
-    colnames(user_data)[-which(colnames(user_data)%in%"author_id")]<- paste("user",user_vars,sep = "_")
-    
-    tweet_data<- left_join(tweet_data,user_data,by = "author_id")
-    save_dir<-make.dir(file.path = paste(data.path,case,"rds",sep = "/"))
-    
-    saveRDS(object = tweet_data,file = paste0(save_dir,"/","tweets_and_prof_info_",case_names[i],".RDS"))
-    
-  }
-  }
-  
+dim_even<- function(data_path,dims){
+  data<- fromJSON(txt = data_path,flatten = T) %>%
+    as.data.frame()
+  missing_dimensions<- dims[-which(dims%in%colnames(data))]
+  data[,missing_dimensions]<-NA
+  return(data)
 }
+
 
 #these should still be applied with for loop for memory conservations
-twitter_cleaner<- function(file,dim_even = F,prob_dim){
+twitter_cleaner<- function(rds_file){
   #if the function will be used with an existing RDS on a local drive,
   #the function can read it now. User needs to provide full path to the file
     
-    twitter_data <- file %>% jsonlite::flatten()
-  
-  
-  
-  #make the dimensions even----
-  #this changes rest of the function a little.
-  if(isTRUE(dim_even)){
-    #this simply removes uncommon columns
-    missing<- ifelse(prob_variables%in%colnames(twitter_data),1,0)
-    
-    missing_cols<-cbind(prob_variables,missing) %>%
-      as.data.frame() %>%
-      filter(missing == 0 ) %>%
-      pull(prob_variables)
-    
-    twitter_data[missing_cols]<-NA
-  }
-  
-  #referenced_tweets for retweets, quotes and replies----
+    twitter_data <- readRDS(file = rds_file)
+
+
+# make column names -------------------------------------------------------
+cat("modifying column names\n")
+twitter_data_colnames<- paste("tweet",colnames(twitter_data),sep = "_")       
+
+colnames(twitter_data)<- twitter_data_colnames
+
+colnames(twitter_data)[which(names(twitter_data) == "tweet_author_id")]<-"author_id"
+
+#referenced_tweets for retweets, quotes and replies----
+cat("creating logical interactivity indicators \n")
+
   if(isTRUE("tweet_referenced_tweets"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_referenced_tweets)))){
     for (i in 1:nrow(twitter_data)) {
       if(length(twitter_data$tweet_referenced_tweets[[i]])==0){
@@ -314,6 +236,8 @@ twitter_cleaner<- function(file,dim_even = F,prob_dim){
   twitter_data$quoted_status_id = ifelse(twitter_data$tweet_referenced_tweets_type =="quoted",twitter_data$tweet_referenced_tweets_id,NA)
   
   #entities: hashtags and mentions----
+  cat("creating hashtag and mention indicators \n")
+  
   if(isTRUE("tweet_entities.hashtags"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_entities.hashtags)))){
     #hashtags
     twitter_data<- twitter_data %>%
@@ -341,6 +265,7 @@ twitter_cleaner<- function(file,dim_even = F,prob_dim){
   }
   
   #contains media ----
+  cat("creating media indicators \n")
   
   if(isTRUE("tweet_attachments.media_keys"%in%colnames(twitter_data)) && isFALSE(all(is.na(twitter_data$tweet_attachments.media_keys)))){
     for(i in 1:nrow(twitter_data)){
@@ -353,43 +278,12 @@ twitter_cleaner<- function(file,dim_even = F,prob_dim){
   }else{
     twitter_data["contains_media"]<-NA
   }
-  #save modified rds----
   
+  #save modified rds----
+  cat("modifications are done, returning the data")
   return(twitter_data)
   
   #finally return the modified dataset.
   
 }
-
-twitter_rds_cleaner<-function(case = C("EU","IO","UK"),data_path){
-  
-  dirty_file_path<- paste0(data_path,case,"/rds/")
-  
-  files_to_clean<- list.files(dirty_file_path,"*.RDS",full.names = T)
-  
-  file_names<- list.files(dirty_file_path,"*.RDS") %>%
-    gsub("tweets_and_prof_info|.RDS","",x=.)
-  
-  prob_variables<-map2_dfr(.x = files_to_clean, .y = file_names, .f = meta_extra) %>% 
-    group_by(var.names) %>%
-    summarise(col_count = n()) %>%
-    filter(col_count < max(.$col_count)) %>% 
-    pull(var.names)
-  
-  
-  clean_rds_path <- make.dir(paste0(getwd(),"/data/",case,"/rds_clean/"))
-  
-  for (i in 1:length(files_to_clean)) {
-    print(paste0("cleaning and saving: ",file_names[i]))
-    clean_rds<-twitter_cleaner(file = files_to_clean[i],
-                               dim_even = T,
-                               prob_dim = prob_variables)
-    
-    saveRDS(object = clean_rds,file = paste0(clean_rds_path,file_names[i],".RDS"))
-    print(paste0("finished cleaning \n saving the clean file to: ",
-                 clean_rds_path,file_names[i],".RDS"))
-  }
-  
-}
-
 
