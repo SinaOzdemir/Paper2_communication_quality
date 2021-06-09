@@ -12,7 +12,6 @@ data.eu<-readRDS(file = paste0(data.path,"/EUcorpus_cleaned.RDS"))
 meta.data.eu<-
 #lets get a quick data summary-------------
 
-data_summary<- Hmisc::contents(data.eu)[[1]] %>% as_tibble(rownames = "var_names")
 
 #this should be empty now:
 na_vars<- data_summary %>%
@@ -82,6 +81,7 @@ eu_intr_reply_p<- eu_intr_comp %>% ggplot(aes(x= user_name,y =yearly_reply_share
 ggsave(filename = "inter_account_reply.jpeg",plot = eu_intr_reply_p,path = graph.path,units = "cm",width = 20,height = 15)
 
 #####quote#####
+
 eu_intr_quote_p <- eu_intr_comp %>% ggplot(aes(x= user_name,y =yearly_quote_share))+
   geom_point(aes(color = yearly_quote_share))+
   theme_minimal()+geom_text(aes(label = user_name),hjust = 0, vjust = 0)+
