@@ -4,8 +4,8 @@
 
 library(tidyverse)
 library(Hmisc)
-library(academictwitteR)
 library(igraph)
+library(ggraph)
 data.path<-paste0(getwd(),"/data/corpii")
 graph.path<- paste0(getwd(),"/plots/")
 data.eu<-readRDS(file = paste0(data.path,"/EUcorpus_cleaned.RDS"))
