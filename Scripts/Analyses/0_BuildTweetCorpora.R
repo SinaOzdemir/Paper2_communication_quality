@@ -117,7 +117,7 @@ collectAccountInfo <- function(actor.type = character(0)) {
     # and follow naming conventions of corpus
     
     current <- current %>% 
-      select(author_id, matches("user_|profile_")) %>% 
+      select(author_id, starts_with("user_")) %>% 
       unique() %>% 
       rename(screen_name = user_username,
              userid = author_id) %>% 

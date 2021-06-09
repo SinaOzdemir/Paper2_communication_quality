@@ -165,7 +165,7 @@ meta_extra <- function(file_path){
   is_json<- grepl(x = file_path,pattern = ".json", fixed = T)
   
     if(isTRUE(is_json)){
-      a<- jsonlite::fromJSON(txt = file_path,flatten = T)%>% as.data.frame()
+      a<- jsonlite::fromJSON(txt = file_path,flatten = T)%>% as.data.frame() %>% jsonlite::flatten()
     }else{
       a <- readRDS(file = file_path) %>% jsonlite::flatten()
       
@@ -180,8 +180,14 @@ meta_extra <- function(file_path){
 
 
 dim_even<- function(data_path,dims){
-  data<- fromJSON(txt = data_path,flatten = T) %>%
-    as.data.frame()
+  if(grepl(pattern = ".json",x = data_path,fixed = T)){
+    data<- fromJSON(txt = data_path,flatten = T) %>%
+      as.data.frame() 
+  }else{
+    data<- readRDS(data_path) %>%
+      as.data.frame() %>% jsonlite::flatten() 
+  }
+  
   missing_dimensions<- dims[-which(dims%in%colnames(data))]
   data[,missing_dimensions]<-NA
   return(data)
@@ -193,16 +199,8 @@ twitter_cleaner<- function(rds_file){
   #if the function will be used with an existing RDS on a local drive,
   #the function can read it now. User needs to provide full path to the file
     
-    twitter_data <- readRDS(file = rds_file)
+    twitter_data <- rds_file
 
-
-# make column names -------------------------------------------------------
-cat("modifying column names\n")
-twitter_data_colnames<- paste("tweet",colnames(twitter_data),sep = "_")       
-
-colnames(twitter_data)<- twitter_data_colnames
-
-colnames(twitter_data)[which(names(twitter_data) == "tweet_author_id")]<-"author_id"
 
 #referenced_tweets for retweets, quotes and replies----
 cat("creating logical interactivity indicators \n")
@@ -280,7 +278,7 @@ cat("creating logical interactivity indicators \n")
   }
   
   #save modified rds----
-  cat("modifications are done, returning the data")
+  cat("modifications are done, returning the data\n")
   return(twitter_data)
   
   #finally return the modified dataset.

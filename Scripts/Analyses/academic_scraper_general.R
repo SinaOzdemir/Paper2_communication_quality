@@ -3,7 +3,9 @@
 source(file = paste0(getwd(),"/Scripts/Data_collection_cleaning/scraping_functions.R"))
 data_path<- paste0(getwd(),"/data")
 cases <- c("UK","EU","IO","TWT")
+
 case_selection<- as.integer(readline(prompt = "Which case should I work on? \n 1:UK \n 2:EU \n 3:IO \n 4:Random sample of tweets from Europe \n"))
+
 case<- cases[case_selection]
 
 #for twitter api
@@ -59,38 +61,88 @@ twitter_json_scraper(accounts = user_names,token_v1 = api_v1_token,
 
 
 # bind user data and tweet data together in RDS -------------------------------------------------------------------
+json_path<- list.dirs(path = file.path(data_path,case,"json"),full.names = T,recursive = F)
+accounts<- list.dirs(path = file.path(data_path,case,"json"),full.names = F,recursive = F)
 
-
-path_for_dim_check<- paste(data_path,case,"json",sep = "/")
-account_files<- list.dirs(path = path_for_dim_check,full.names = T,recursive = F)
-account_names<- list.dirs(path = path_for_dim_check,full.names = F,recursive = F)
-
-data.dimensions<- data.frame()
-
-for (i in 1:length(account_files)) {
-  print(paste0("detecting dimensions for ", account_names[i]))
-  json_files<- list.files(path = account_files[i],pattern = "data_[0-9]+",full.names = T)
-  json_dimensions<- map_dfr(.x = json_files,.f = meta_extra)
-  data.dimensions<- rbind(data.dimensions,json_dimensions)  
+for (i in 118:length(json_path)) {
+  cat("working on", accounts[i],".\n")
+  
+  data_jsons<- list.files(path = json_path[i],pattern = "data_[0-9]+",full.names = T)
+  user_json<- list.files(path = json_path[i],pattern = "users_[0-9]+",full.names = T)[1]
+  
+  if(length(data_jsons) == 0 || length(user_json) == 0){
+    cat("there is a problem with user or tweet data\n",
+        "tweet data length", length(data_jsons),".\n",
+        "user data length", length(user_json),".\n",
+        "skipping the user", accounts[i],".\n")
+    next
+  }
+  
+  cat("binding data and modifying colnames of", accounts[i],".\n")
+  
+  tweets<- map_dfr(data_jsons,fromJSON)
+  tweets_colnames<- paste("tweet",colnames(tweets),sep = "_")
+  colnames(tweets)<- tweets_colnames
+  colnames(tweets)[which(names(tweets)=="tweet_author_id")]<-"author_id"
+  
+  
+  cat("appending user profile information for", accounts[i],".\n")
+  user<- unique(tweets$author_id)
+  
+  user_data<- fromJSON(txt = user_json)[["users"]] %>%
+    as.data.frame() %>%
+    filter(id == user) %>%
+    rename(author_id = id)
+  
+  user_colnames <- paste("user",colnames(user_data),sep = "_")
+  
+  colnames(user_data)<- user_colnames
+  
+  colnames(user_data)[which(names(user_data)=="user_author_id")]<- "author_id"
+  
+  twitter_data<- left_join(x = tweets, y = user_data, by = "author_id")
+  
+  cat("profile information is appended, converting data to RDS for", accounts[i],".\n")
+  
+  saveDIR<-make.dir(file.path = file.path(data_path,case,"rds"))
+  
+  saveRDS(object = twitter_data,file = paste0(saveDIR,"/",accounts[i],".RDS"))
+  
 }
 
-prob_dims<- data.dimensions %>%group_by(var.names) %>%
+
+# dimension evening and cleaning -------------------------------------------------------
+
+
+rds_files<- list.files(path = file.path(data_path,case,"rds"),pattern = "*.RDS",full.names = T,recursive = F)
+rds_names<- list.files(path = file.path(data_path,case,"rds"),pattern = "*.RDS",full.names = F,recursive = F)
+
+
+prob_dims<- map_dfr(rds_files,meta_extra) %>%
+  group_by(var.names) %>%
   dplyr::summarise(col_count = n()) %>%
   filter(col_count < max(.$col_count)) %>% pull(var.names)
 
 
-for(i in 1:length(account_files)){
-  print(paste0("evening out dimensions and converting jsons to rds for ", account_names[i]))
-  json_files<- list.files(path = account_files[i],pattern = "data_[0-9]+",full.names = T)
-  if(length(json_files) == 0){
-    next
-  }
-  twitter_data<- map_dfr(.x = json_files, .f = dim_even, dims = prob_dims)
-  saveDIR<- make.dir(file.path = paste0(data_path,"/",case,"/","rds/"))
-  saveRDS(object = twitter_data, file = paste0(saveDIR,account_names[i],".RDS"))
+#run this individually rds_files[75] and rds_files[118]
+
+for (i in 119:length(rds_files)) {
+  
+  account<- gsub(".RDS","",rds_names[i])
+  
+  cat("working on:", account,".\n",sep = " ")
+  
+  clean_rds<- dim_even(data_path = rds_files[i],dims = prob_dims)
+  
+  clean_rds<- twitter_cleaner(rds_file = clean_rds)
+  
+  saveDIR<- make.dir(file.path = file.path(data_path,case,"rds_clean"))
+  saveRDS(object = clean_rds,file = paste0(saveDIR,"/",account,".RDS"))
+  cat("finished working on", account,"moving on to the next account\n",sep = " ")
+  
+  remove(clean_rds)
 }
-remove(twitter_data)
- 
+
 
 # TWT
 #detect problem variables to even out dimensions:
@@ -99,48 +151,15 @@ remove(twitter_data)
 # cleaning dfs: ---------------------------------------------------------------
 
 
-rds_files<- list.files(file.path(data_path,case,"rds"),pattern = "*.RDS",full.names = T)
-accounts<- list.files(file.path(data_path,case,"rds"),pattern = "*.RDS",full.names = F)
-for (i in 1:length(rds_files)) {
-    
-  account<- gsub(".RDS","",accounts[i])
-    
-    cat("working on:", account,".\n",sep = " ")
-    
-    clean_rds<- twitter_cleaner(rds_file = rds_files[i])
-    
-    cat("adding profile information\n")
-    user_id<- as.character(unique(clean_rds$author_id))
-    
-    #this works outside the function but
-    #for some reason I get:
-    #Error: Problem with `filter()` input `..1`.
-    #x Input `..1` must be of size 167 or 1, not size 0.
-    #i Input `..1` is `id == user_id`.
-    #when i put it in the function so I decided to do it outside the function
-    
-    prof_info<- list.files(file.path(data_path,case,"json",account),pattern = "users_[0-9]+",full.names = T)[1]
-   
-    if(isFALSE(length(prof_info)==0)){
-      profile_information<- fromJSON(txt = prof_info,flatten = T)[["users"]] %>%
-        as.data.frame() %>% 
-        filter(id == user_id) %>%
-        rename(author_id = id)
-      
-      profile_colnames<- paste("user",colnames(profile_information),sep = "_")
-      
-      colnames(profile_information)[which(names(profile_information)=="profile_author_id")]<-"author_id"
-      
-      clean_rds<- left_join(clean_rds, profile_information, by = "author_id")
-      cat("found profile information for ", account,"appending it to the data\n", sep = " ")
-    }
-    
-    saveDIR<- make.dir(file.path = file.path(data_path,case,"rds_clean"))
-    saveRDS(object = clean_rds,file = paste0(saveDIR,"/",account,".RDS"))
-    cat("finished working on", account,"moving on to the next account\n",sep = " ")
-    
-    remove(clean_rds)
-}
+
+clean_rds_path<- list.files(file.path(data_path,case,"rds_clean"),pattern = "*.RDS",full.names = T)
+
+rds_prob_dim<-map_dfr(.x = clean_rds_path,.f = meta_extra)
+
+prob_dims<- rds_prob_dim %>%group_by(var.names) %>%
+  dplyr::summarise(col_count = n()) %>%
+  filter(col_count < max(.$col_count)) %>% pull(var.names)
+
 
 
 #TWT data is already clean.
