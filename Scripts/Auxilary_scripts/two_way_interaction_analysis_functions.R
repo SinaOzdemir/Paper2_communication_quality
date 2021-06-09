@@ -36,4 +36,21 @@ make.dir<- function(file.path){
 
 # variable manipulators ---------------------------------------------------
 
+data_cleaner<- function(data){
+  
+  clean_data<- data %>%filter(langlang %in% "en") %>% 
+    mutate(across(.cols = starts_with("is_"), ~tidyr::replace_na(.x, 0))) %>%
+    mutate(across(.cols = starts_with("is_"),~as.numeric(.x))) %>% 
+    mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>%
+    mutate(tweet_year = lubridate::floor_date(tweet_date,unit = "year"),
+           tweet_month = lubridate::floor_date(tweet_date,unit = "month"),
+           tweet_week = lubridate::floor_date(tweet_date,unit = "week"),
+           tweet_day = lubridate::floor_date(tweet_date,unit = "day"),
+           tweet_calendar_day = weekdays(tweet_date))
+  
+  return(clean_data)
+    
+}
 
+
+descriptive_plots<- function(data,what = c("reply","quote","retweet"),unit = c("year","month"))
