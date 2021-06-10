@@ -63,7 +63,7 @@ data_reader<- function(file_path, case = c("UK","EU","IO")){
                       "retweet_status_id",
                       "quoted_status_id",
                       "tweet_in_reply_to_user_id",
-                      "tweet_date")
+                      "tweet_date","lang")
   
   check<- readline(prompt = "This function is intended to read final analysis data.\n Are you reading the preprocessed data? \n 1: Yes\n 2: No")
   
@@ -104,7 +104,7 @@ data_reader<- function(file_path, case = c("UK","EU","IO")){
 #Function works!
 data_cleaner<- function(data){
   
-  clean_data<- data %>%filter(langlang %in% "en") %>% 
+  clean_data<- data %>%filter(tweet_lang %in% "en") %>% 
     mutate(across(.cols = starts_with("is_"), ~tidyr::replace_na(.x, 0))) %>%
     mutate(across(.cols = starts_with("is_"),~as.numeric(.x))) %>% 
     mutate(tweet_date = lubridate::as_date(.$tweet_created_at)) %>%
@@ -124,7 +124,7 @@ descriptive_plots<- function(data,
                              unit = c("year","month","week","calendar_day"),
                              graph_type = c("bar_stack","bar_dodge","scatter")){
   
-  trimmed_data<- data %>% select(tweet_id,
+  trimmed_data<- test_cleaned %>% select(tweet_id,
                                  author_id,
                                  user_username,
                                  tweet_in_reply_to_user_id,
@@ -133,15 +133,16 @@ descriptive_plots<- function(data,
                                  tweet_year,
                                  tweet_month,
                                  tweet_calendar_day)
-  
+  # TODO: test this approach! 
   if(what == "reply"){
-    cat("removing threads pretending to be replies")
-    trimmed_data<- trimmed_data %>% 
-      filter(tweet_in_reply_to_user_id != author_id)
+    cat("recoding reply count to remove threads pretending to be replies")
+    trimmed_data$is_reply<-ifelse(is.na(trimmed_data$tweet_in_reply_to_user_id),0,
+                                  ifelse(trimmed_data$tweet_in_reply_to_user_id == trimmed_data$author_id,0,1))
   }
   
   aggregation_data<- trimmed_data %>%
-    select(tweet_id,author_id,user_username, matches(what),matches(unit))
+    select(tweet_id,author_id,user_username, matches(what),matches(unit)) %>%
+    select(-any_of("tweet_in_reply_to_user_id"))
   
   colnames(aggregation_data)<-c("tweet_id","user_id","screen_name","filtering_unit","aggregation_unit")
   
@@ -226,4 +227,71 @@ descriptive_plots<- function(data,
                              nrow(aggregation_data)))
     return(desc_plot)
   }
+}
+
+
+network_grapher<-function(data,case = c("the UK","the EU","IOs"), v1_api){
+  
+  
+  
+  reply_data<- data %>% filter(is_reply == 1 & tweet_in_reply_to_user_id != author_id) %>%
+    select(tweet_id,author_id,user_username,tweet_in_reply_to_user_id)
+  
+  reply_routes<- reply_data %>%
+    group_by(user_username,tweet_in_reply_to_user_id) %>%
+    summarise(weight = n()) %>% group_by(user_username) %>% 
+    slice_max(weight,n=10) %>% ungroup() %>% 
+    rename(user_id = tweet_in_reply_to_user_id) %>% 
+    left_join(x = .,y = receiver_key, by = "user_id") %>% 
+    select(-user_id) %>% 
+    rename(sender = user_username,
+           receiver = screen_name) %>% 
+    relocate(sender,receiver,weight) 
+  
+  
+  receiver_key<- reply_routes %>% pull(receiver) %>% 
+    rtweet::lookup_users(users = .,
+                         parse = T,
+                         token = v1_api) %>% 
+    select(user_id,screen_name)
+  
+  reply_sender<- reply_data %>%
+    distinct(user_username) %>%
+    rename(label = user_username)
+  
+  reply_nodes<- receiver_key %>%
+    select(screen_name) %>%
+    rename(label = screen_name) %>%
+    full_join(x = ., y = reply_sender, by = "label") %>% 
+    rowid_to_column(var = "id")
+  
+  
+  reply_edges <- reply_routes %>% 
+    left_join(.,reply_nodes, by = c("sender" = "label")) %>% 
+    rename(from = id)
+  
+  
+  reply_edges <- reply_edges %>% 
+    left_join(.,reply_nodes, by = c("receiver" = "label")) %>% 
+    rename(to = id)  %>% select(from,to,weight)
+  
+  
+  reply_tidygraph<- tidygraph::tbl_graph(nodes = reply_nodes, edges = reply_edges, directed = T)
+  
+  
+  # reply_tidygraph<- reply_tidygraph %>% 
+  #   activate(edges) %>% #need to active a tibble to manipulate, nodes are active by default. Active tibbles are printed on top on the console
+  #   arrange(desc(weight))
+  # 
+  #TODO: sender accounts needs to be different color, different type of senders needs to be different shape
+  
+  desc_network <- ggraph(reply_tidygraph, layout = "graphopt") + 
+    geom_node_point(color = "steel blue",size = 5) +
+    geom_edge_link(aes(width = weight),color = "gray50", alpha = .8) + 
+    scale_edge_width(range = c(.5, 2)) +
+    geom_node_text(aes(label = label), repel = TRUE) +
+    labs(edge_width = "Reply Freq") +
+    theme_graph()+labs(title = paste0("Reply network of ", case," verified accounts"), subtitle = "All time top 10 addresses by account")
+  
+  return(desc_network)
 }
