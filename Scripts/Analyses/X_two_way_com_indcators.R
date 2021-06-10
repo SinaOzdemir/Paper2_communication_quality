@@ -3,6 +3,12 @@
 # setup -------------------------------------------------------------------
 source(file = file.path(getwd(),"Scripts","Auxilary_scripts","two_way_interaction_analysis_functions.R"))
 data.path<-file.path(getwd(),"data")
+api_v1_token <- rtweet::create_token(app = "Functionised_collector",
+                                     consumer_key = "c0wODdFRKzNDz23l7O9A6GBig",
+                                     consumer_secret = "uwraekdxEX2BaVZSNLw7sjkVbq3wNRByYYiOolHrYaikqZHKUW",
+                                     access_token = "1151438784384421888-eas7PxAdeoohUCykI5XeX2Wc2lppjl",
+                                     access_secret = "96TaBIVuZXlpICK2QAP7IurCFuYPfHSUbXYUTTSRak3gr",
+                                     set_renv = F)
 
 case_data<-data_reader(file_path = data.path,case = "EU")
 
@@ -36,40 +42,25 @@ eu_scatter_plot_retweet<- descriptive_plots(data = case_data_clean,
 
 # network graph of interactivity ------------------------------------------------
 
+eu_reply_graph<- network_grapher(data = test_data,case = "the EU", v1_api = api_v1_token)
+
+
+# test --------------------------------------------------------------------
+
+
 test_data<- readRDS(file = list.files(file.path(getwd(),"data","EU","rds_clean"),pattern = "*.RDS",full.names = T)[1])
 
-#reply source:
 
-reply_data<- test_data %>% filter(is_reply == 1 & tweet_in_reply_to_user_id != author_id) %>%
-  select(tweet_id,author_id,user_username,tweet_in_reply_to_user_id)
+test_cleaned<- data_cleaner(test_data)
 
+eu_reply_desc_plot<- descriptive_plots(data = test_cleaned,
+                                             case = "the EU",
+                                             what = "reply",
+                                             unit = "year",
+                                             graph_type = "scatter")
 
-eu.data.path<- "C:/Users/sinaf/OneDrive - NTNU/Projects/communication_quality_repo/data/EU/rds/"
-eu.data.list<- list.files(path = eu.data.path, pattern = "*.RDS",full.names = T)
-eu.reply.network<- map_dfr(eu.data.list, readRDS) %>% select(author_id,tweet_in_reply_to_user_id)
+eu_reply_desc_plot + eu_reply_graph
 
-eu.edge.list<- eu.reply.network %>%
-  group_by(author_id,tweet_in_reply_to_user_id) %>% 
-  summarise(weight = n()) %>%
-  arrange(desc(weight)) %>%
-  rename(from = author_id , to =  tweet_in_reply_to_user_id) %>%
-  mutate(to = ifelse(from == to, NA, to)) %>% drop_na(to)
-
-
-eu.node.list<- eu.edge.list %>%
-  pivot_longer(cols = c("from","to"),names_to = "variable", values_to = "labels") %>%
-  select(labels) %>%
-  distinct(labels)
-
-eu.top5.edge <- eu.edge.list %>% group_by(from) %>% slice_max(order_by = weight, n = 5)
-
-eu.top5.node <- eu.node.list %>% filter(labels %in% eu.top5.edge$from || labels%in%eu.top5.edge$to)
-
-network.dta<-graph_from_data_frame(d = eu.top5.edge,vertices = eu.top5.node,directed = T)
-
-E(network.dta)$width<-eu.top5.edge$weight
-
-
-
-#this looks hideous There are some good visualization ideas here https://www.jessesadler.com/post/network-analysis-with-r/?fbclid=IwAR3O0zFbSF0V0UjMXVhQASJy4ft_7InhMtfArPK3AOuylNOUL-noQmV8y5g
-plot(network.dta)
+#TODO:
+#1) see if the functions are scalable
+#2) Fix todo's in the function folder
