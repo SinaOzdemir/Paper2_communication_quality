@@ -12,7 +12,7 @@ library(tidyverse)
 # Function to harmonize analytic data sets ####
 # Includes extraction of info on external urls and media (takes time!)
 
-# Expetcs data frame put out by 1_TextCleaning.R
+# Expects data frame put out by 1_TextCleaning.R
 
 harmonizeAnalytics <- function(corpus = data.frame(0)) {
   

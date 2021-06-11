@@ -216,11 +216,15 @@ buildTweetCorpusTWT <- function(actor.type = character(0)) {
   # Rebuild joint url object as in other API
   # eu$entities.urls[1] # Reference structure (the target)
   # names.twt[grepl("url", names.twt)] # All url variables in TWT structure
+  print("Harmonizing url storage")
   
   corpus$entities.urls <- NA
   
-  for (i in 1:nrow(twt)) {
+  pb <- txtProgressBar(min = 0, max = nrow(corpus), style = 3) # Progress bar
+  
+  for (i in 1:nrow(corpus)) {
     
+    # Collapse all urls of the twit in one list object
     urls <- c(corpus$urls_expanded_url[i], corpus$media_expanded_url[i], corpus$ext_media_expanded_url[i]) %>% 
       as.data.frame() %>% 
       t() %>% 
@@ -233,13 +237,18 @@ buildTweetCorpusTWT <- function(actor.type = character(0)) {
       relocate(start, end, url, expanded_url, display_url) %>% 
       list()
     
+    # Store in variable
     corpus$entities.urls[i] <- urls
+    
+    # Update progress bar
+    setTxtProgressBar(pb, i)
   }
   
+  print("Clean up data and harmonize structure.")
   
   # Rebuild column structure as in EU sample
   # Renaming, non_existent vars to NA
-  corpus <- twt %>% 
+  corpus <- corpus %>% 
     rename(userid = user_id,
            timestamp = created_at,
            id = status_id,
@@ -264,10 +273,6 @@ buildTweetCorpusTWT <- function(actor.type = character(0)) {
            hashtags, referenced_tweets_type, referenced_tweets_id, conversation_id, lang, source, sensitive, context_annotations, in_reply_to_user_id, 
            entities.mentions, entities.hashtags, entities.urls, entities.annotations, retweet_count, reply_count,
            like_count, quote_count, attachments.media_keys, retweet_status_id, reply_to_status_id, quoted_status_id, contains_media)
-  
-  
-  
-  
   
   # Clean up some variables
   
