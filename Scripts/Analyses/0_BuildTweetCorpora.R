@@ -40,7 +40,7 @@ buildTweetCorpus <- function(actor.type = character(0)) {
     current <- read_rds(files[i])
     
     # Should column structure be partially inconsitent across files
-    # add explciti dplyr::select() call here
+    # add explicit dplyr::select() call here
     
     # Append to target DF
     corpus <- rbind(corpus, current)
