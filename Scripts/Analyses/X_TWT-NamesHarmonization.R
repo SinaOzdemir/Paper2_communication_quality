@@ -8,7 +8,27 @@ names.twt <- names(twt)
 
 
 # Rebuild joint url object as in other API
+# eu$entities.urls[1] # Reference structure (the target)
+# names.twt[grepl("url", names.twt)] # All url variables in TWT structure
 
+twt$entities.urls <- NA
+
+for (i in 1:nrow(twt)) {
+  
+  urls <- c(twt$urls_expanded_url[i], twt$media_expanded_url[i], twt$ext_media_expanded_url[i]) %>% 
+    as.data.frame() %>% 
+    t() %>% 
+    as.data.frame() %>% 
+    rename(expanded_url = 1) %>% 
+    mutate(start = NA,
+           end = NA,
+           url = NA,
+           display_url = NA) %>% 
+    relocate(start, end, url, expanded_url, display_url) %>% 
+    list()
+  
+  twt$entities.urls[i] <- urls
+}
 
 
 # Rebuild column structure as in EU sample
@@ -19,7 +39,6 @@ corpus <- twt %>%
          id = status_id,
          mentioned_username = mentions_screen_name,
          in_reply_to_user_id = reply_to_user_id,
-         entities.urls = urls_expanded_url,
          like_count = favourites_count,
          attachments.media_keys = media_url) %>% 
   mutate(is_reply = !is.na(reply_to_status_id),
