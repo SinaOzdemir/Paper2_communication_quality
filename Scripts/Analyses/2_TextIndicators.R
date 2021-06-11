@@ -77,7 +77,7 @@ retrieveIndicators <- function(tweetcorpus = data.frame(0)) {
     mutate(lsd = log((positive + .5)/(negative + .5))) %>% # The Lowe aggregation, see e.g. https://onlinelibrary.wiley.com/doi/full/10.1111/lsq.12218
     select(-c(positive, negative))
   rm(toks)
- 
+  
   
   # Combine extracted indicators along qunateda and original ids
   print("Combining extracted indicators.")
@@ -121,58 +121,58 @@ retrieveIndicators <- function(tweetcorpus = data.frame(0)) {
 
 # EU Tweets ####
 
-# Corpus 
-corpus <- read_rds("./data/corpii/EU_corpus_cleaned.RDS")
-
-# Sample for testing purposes
-# corpus <- corpus %>% sample_n(1000)
-
-# Extract information
-df <- retrieveIndicators(corpus) %>% 
-  select(-texten) # To save memory, available after merge with cleaned corpus later
-
-# Export 
-write_rds(df, "./data/corpii/EU_corpus_TextIndicators.RDS")
-rm(list = c('corpus','df'))
+# # Corpus 
+# corpus <- read_rds("./data/corpii/EU_corpus_cleaned.RDS")
+# 
+# # Sample for testing purposes
+# # corpus <- corpus %>% sample_n(1000)
+# 
+# # Extract information
+# df <- retrieveIndicators(corpus) %>% 
+#   select(-texten) # To save memory, available after merge with cleaned corpus later
+# 
+# # Export 
+# write_rds(df, "./data/corpii/EU_corpus_TextIndicators.RDS")
+# rm(list = c('corpus','df'))
 
 
 
 # IO Tweets ####
 
-# Corpus 
-corpus <- read_rds("./data/corpii/IO_corpus_cleaned.RDS")
-
-# Extract information
-df <- retrieveIndicators(corpus) %>% 
-  select(-texten) # To save memory, available after merge with cleaned corpus later
-
-# Export 
-write_rds(df, "./data/corpii/IO_corpus_TextIndicators.RDS")
-
-
-
-# # UK Tweets ####
-# 
 # # Corpus 
-# corpus <- read_rds("./data/corpii/UK_corpus_cleaned.RDS")
+# corpus <- read_rds("./data/corpii/IO_corpus_cleaned.RDS")
 # 
 # # Extract information
 # df <- retrieveIndicators(corpus) %>% 
 #   select(-texten) # To save memory, available after merge with cleaned corpus later
 # 
 # # Export 
-# write_rds(df, "./data/corpii/UK_corpus_TextIndicators.RDS")
-# 
-# 
-# 
-# # TWT Tweets ####
-# 
-# # Corpus 
+# write_rds(df, "./data/corpii/IO_corpus_TextIndicators.RDS")
+
+
+
+# UK Tweets ####
+
+# Corpus
+corpus <- read_rds("./data/corpii/UK_corpus_cleaned.RDS")
+
+# Extract information
+df <- retrieveIndicators(corpus) %>%
+  select(-texten) # To save memory, available after merge with cleaned corpus later
+
+# Export
+write_rds(df, "./data/corpii/UK_corpus_TextIndicators.RDS")
+
+
+
+# TWT Tweets ####
+
+# # Corpus
 # corpus <- read_rds("./data/corpii/TWT_corpus_cleaned.RDS")
 # 
 # # Extract information
-# df <- retrieveIndicators(corpus) %>% 
+# df <- retrieveIndicators(corpus) %>%
 #   select(-texten) # To save memory, available after merge with cleaned corpus later
 # 
-# # Export 
+# # Export
 # write_rds(df, "./data/corpii/TWT_corpus_TextIndicators.RDS")

@@ -139,24 +139,24 @@ collectAccountInfo <- function(actor.type = character(0)) {
 
 # EU tweets ####
 
-corp <- buildTweetCorpus("EU")
-write_rds(corp, "./data/corpii/EU_corpus.RDS")
-rm(eucorp)
-
-accounts <- collectAccountInfo("EU")
-write_rds(accounts, "./analysis_data/EU_account_list.RDS")
-rm(euaccounts)
+# corp <- buildTweetCorpus("EU")
+# write_rds(corp, "./data/corpii/EU_corpus.RDS")
+# rm(eucorp)
+# 
+# accounts <- collectAccountInfo("EU")
+# write_rds(accounts, "./analysis_data/EU_account_list.RDS")
+# rm(euaccounts)
 
 
 # IO tweets ####
 
-corp <- buildTweetCorpus("IO")
-write_rds(corp, "./data/corpii/IO_corpus.RDS")
-rm(corp)
-
-accounts <- collectAccountInfo("IO")
-write_rds(accounts, "./analysis_data/IO_account_list.RDS")
-rm(accounts)
+# corp <- buildTweetCorpus("IO")
+# write_rds(corp, "./data/corpii/IO_corpus.RDS")
+# rm(corp)
+# 
+# accounts <- collectAccountInfo("IO")
+# write_rds(accounts, "./analysis_data/IO_account_list.RDS")
+# rm(accounts)
 
 
 # UK tweets ####
@@ -170,9 +170,7 @@ write_rds(accounts, "./analysis_data/UK_account_list.RDS")
 rm(accounts)
 
 
-# accounts <- collectAccountInfo("IO")
-# write_rds(accounts, "./analysis_data/UK_account_list.RDS")
-# rm(accounts)
+
 # 
 # 
 # # Random tweets ####
