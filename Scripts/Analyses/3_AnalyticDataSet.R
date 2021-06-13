@@ -119,7 +119,7 @@ harmonizeAnalytics <- function(corpus = data.frame(0)) {
              like_count, retweet_count, reply_count, quote_count,   # User engagement
              contains_media, nphotos, nvideos, ntube, emojicount,   # Media
              nmentions, nhashtags, nexturl,                         # Interlangae indicators
-             nlang))                                                # Number of languages
+             nlang, in_reply_to_user_id))                           # Number of languages, interaction with other users
   
 }
 
@@ -130,7 +130,7 @@ harmonizeAnalytics <- function(corpus = data.frame(0)) {
 
 # Extract analytic data
 eu <- harmonizeAnalytics(read_rds("./data/corpii/EU_corpus_cleaned.RDS"))
-  
+
 # Text indicators
 tindicators <- read_rds("./data/corpii/EU_corpus_TextIndicators.RDS")
 
@@ -142,12 +142,12 @@ eu <- eu %>% left_join(tindicators, by = "id")
 # Along Serra's coding here
 
 # Raw account classification (by Serra Erkenci)
-accounts <- read.csv2("./data/EUaccountsCoding_Serra.csv") %>% 
+accounts <- read.csv2("./data/EUaccountsCoding_Serra.csv") %>%
   select(screen_name, account_type)
-accounts$account_type <- accounts$account_type %>% 
+accounts$account_type <- accounts$account_type %>%
   recode(`3` = 2L) %>% # Subsume office accounts into institional accounts (effectively Ombudsman and eucopresident)
   recode(`1` = "Personal Accounts",
-         `2` = "Institutional Accounts") %>% 
+         `2` = "Institutional Accounts") %>%
   factor(levels = c("Personal Accounts", "Institutional Accounts"))
 
 eu <- eu %>% left_join(accounts, by = "screen_name")
@@ -178,41 +178,60 @@ io$tweetsample <- "IO"
 
 
 
-# # UK Tweet sample ####
-# 
-# # Extract analytic data
-# uk <- harmonizeAnalytics(read_rds("./data/corpii/UK_corpus_cleaned.RDS"))
-# 
-# # Text indicators
-# tindicators <- read_rds("./data/corpii/UK_corpus_TextIndicators.RDS")
-# 
-# # Combine with analytic data
-# uk <- uk %>% left_join(tindicators, by = "id")
-# 
-# # Mark sample
-# uk$tweetsample <- "UK"
+# UK Tweet sample ####
+
+# Extract analytic data
+# uk <- harmonizeAnalytics(read_rds("./data/corpii/UK_corpus_cleaned.RDS") %>% sample_n(100)) # Sample
+uk <- harmonizeAnalytics(read_rds("./data/corpii/UK_corpus_cleaned.RDS"))
+
+# Text indicators
+tindicators <- read_rds("./data/corpii/UK_corpus_TextIndicators.RDS")
+
+# Combine with analytic data
+uk <- uk %>% left_join(tindicators, by = "id")
+
+
+# Add account info
+accounts <- read.csv2("./data/uk_accounts_CRedit.csv") %>% 
+  mutate(twitter_handle = str_trim(twitter_handle)) %>% 
+  rename(screen_name = twitter_handle) %>% 
+  select(screen_name, account_type, institutional_affiliation)
+
+uk <- uk %>%  left_join(accounts, by = "screen_name")
+
+# Filter out parliamentary accounts
+uk <- uk %>% filter(!str_detect(institutional_affiliation, "House of "))
+
+# Mark sample
+uk$tweetsample <- ifelse(uk$account_type == "individual",
+                         "UK (pers. account)",
+                         "UK (inst. account)")
+
+uk$account_type <- NULL
+uk$institutional_affiliation <- NULL
 
 
 
-# # TWT sample ####
-# 
-# # Extract analytic data
-# twt <- harmonizeAnalytics(read_rds("./data/corpii/TWT_corpus_cleaned.RDS"))
-# 
-# # Text indicators
-# tindicators <- read_rds("./data/corpii/TWT_corpus_TextIndicators.RDS")
-# 
-# # Combine with analytic data
-# twt <- twt %>% left_join(tindicators, by = "id")
-# 
-# # Mark sample
-# twt$tweetsample <- "TWT"
+# TWT sample ####
+
+# Extract analytic data
+twt <- harmonizeAnalytics(read_rds("./data/corpii/TWT_corpus_cleaned.RDS"))
+
+# Text indicators
+tindicators <- read_rds("./data/corpii/TWT_corpus_TextIndicators.RDS")
+
+# Combine with analytic data
+twt <- twt %>% left_join(tindicators, by = "id")
+
+# Mark sample
+twt$tweetsample <- "Random Tweets"
 
 
 
 # Combine and export analytic data set ####
 
-df <- rbind(eu, io)
+# df <- rbind(eu, io)
 # df <- rbind(eu, io, uk, twt)
+df <- rbind(eu, io, twt)
 
 write_rds(df, "./data/AnalyticData_AllSamples.RDS")

@@ -44,7 +44,7 @@ retrieveIndicators <- function(tweetcorpus = data.frame(0)) {
   rm(tweetcorpus)
   
   # Quanteda corpus object and identifiers
-  qcorp <- corpus(df$texten, docvars = data.frame(corpus[, "id"]))
+  qcorp <- corpus(df$texten, docvars = data.frame(df[, "id"]))
   docids <- docvars(qcorp) %>% # Keep quanteda ids for merging later
     mutate(doc_id = as.character(docid(qcorp)))
   
@@ -153,26 +153,37 @@ retrieveIndicators <- function(tweetcorpus = data.frame(0)) {
 
 # UK Tweets ####
 
+# Corpus
+corpus <- read_rds("./data/corpii/UK_corpus_cleaned.RDS")
+
+# Split in half - memory issues 
+corpus1 <- corpus[1:1217873, ]
+corpus2 <- corpus[1217874:nrow(corpus), ]
+rm(corpus)
+gc()
+
+
+
+# Extract information
+df1 <- retrieveIndicators(corpus1) %>%
+  select(-texten) # To save memory, available after merge with cleaned corpus later
+df2 <- retrieveIndicators(corpus2) %>%
+  select(-texten) # To save memory, available after merge with cleaned corpus later
+
+# Export
+df <- rbind(df1, df2)
+write_rds(df, "./data/corpii/UK_corpus_TextIndicators.RDS")
+
+
+
+# TWT Tweets ####
+
 # # Corpus
-# corpus <- read_rds("./data/corpii/UK_corpus_cleaned.RDS")
+# corpus <- read_rds("./data/corpii/TWT_corpus_cleaned.RDS")
 # 
 # # Extract information
 # df <- retrieveIndicators(corpus) %>%
 #   select(-texten) # To save memory, available after merge with cleaned corpus later
 # 
 # # Export
-# write_rds(df, "./data/corpii/UK_corpus_TextIndicators.RDS")
-
-
-
-# TWT Tweets ####
-
-# Corpus
-corpus <- read_rds("./data/corpii/TWT_corpus_cleaned.RDS")
-
-# Extract information
-df <- retrieveIndicators(corpus) %>%
-  select(-texten) # To save memory, available after merge with cleaned corpus later
-
-# Export
-write_rds(df, "./data/corpii/TWT_corpus_TextIndicators.RDS")
+# write_rds(df, "./data/corpii/TWT_corpus_TextIndicators.RDS")
