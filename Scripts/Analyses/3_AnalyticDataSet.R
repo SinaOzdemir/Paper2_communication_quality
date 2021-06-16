@@ -231,7 +231,7 @@ twt$tweetsample <- "Random Tweets"
 # Combine and export analytic data set ####
 
 # df <- rbind(eu, io)
-# df <- rbind(eu, io, uk, twt)
-df <- rbind(eu, io, twt)
+df <- rbind(eu, io, uk, twt)
+# df <- rbind(eu, io, twt)
 
 write_rds(df, "./data/AnalyticData_AllSamples.RDS")
