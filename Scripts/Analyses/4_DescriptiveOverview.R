@@ -222,10 +222,11 @@ pl.daily.eu <- # The plot
   # geom_point()+
   # stat_summary(geom = "line", fun = mean)+
   stat_smooth(color = "#003399")+
+  # geom_rug(sides = "b", alpha = .2)+
   scale_y_continuous(breaks = seq(0,3.5,0.5))+
   coord_cartesian(ylim = c(0, 3.7))+ 
   scale_x_discrete(breaks = t.breaks, labels = t.labels) +
-  labs(title = "(A) Average daily number of tweets\nby supranational EU accounts over time (smoothed)",
+  labs(title = "Average daily number of tweets\nby supranational EU accounts over time (smoothed)",
        x= "", y = "")
 
 
@@ -238,7 +239,7 @@ pl.daily.comp <-
   facet_grid(.~ reorder(group2, desc(group2)), scales = "free_x")+
   scale_y_continuous(breaks = seq(0,3.5,0.5))+
   coord_cartesian(ylim = c(0, 3.7))+ 
-  labs(title = "(B) Average daily number of tweets\nper account and actor type",
+  labs(title = "Average daily number of tweets\nper account and actor type",
        x= "", y = "")+
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
@@ -251,173 +252,92 @@ pl.daily <-
 
 ggsave("./plots/DescriptiveOverview/DailyTweets.png", plot = pl.daily, width = 30, height = 12, units = "cm")
 
-
-
-
-
-
-
-
-
-
-# Tweet output ####
-
-# Monthly number of supranational tweets # 
-eumonthly <- tweets %>% 
-  filter(!benchmark) %>% # Only the EU Tweets
-  group_by(month) %>% 
-  summarise(count = n()) %>% 
-  arrange(month)
-
-# Ensure full range of months
-months <- seq.Date(from = min(tweets$day[!tweets$benchmark]), 
-                   to = max(tweets$day[!tweets$benchmark]), 
-                   by = "days") %>% 
-  as.character() %>% 
-  str_remove("-[0-9]{2}$") %>% 
-  unique() %>% 
-  as.data.frame() %>% 
-  rename(month = 1)
-
-# Plotting markers
-t.breaks <- months %>% 
-  filter(str_detect(month, "-01")) # Only Januaries
-t.breaks <- t.breaks[,1] # Atomic vector
-t.labels <- str_remove(t.breaks, "-01")  
-
-# Join series
-eumonthly <- left_join(months, eumonthly, by = "month")
-
-# Plot time series
-pl.output.month <- 
-  ggplot(eumonthly, aes(x=month, y = count, group = 1))+
-  geom_bar(stat = "identity", width = .5, fill = "#003399", color = "#003399")+
-  # geom_line()+
-  scale_x_discrete(breaks = t.breaks, labels = t.labels)+
-  labs(title = "Number of tweets by supranational EU actors per month ",
-       x = "",
-       y = "")
-
-
-# Daily number of tweets #
-# NOT SURE: DOES THIS NEED TO BE GROUPED BY ACCOUNTS FIRST?
-# SO AS TO SHOW VARIATION WITHIN GROUP?
-daily <- tweets %>% 
-  filter(!str_detect(tweetsample, "Random")) %>% 
-  group_by(group1, day) %>% 
-  summarise(count = n()) %>% 
-  mutate(benchmark = !str_detect(as.character(group1), "^EU"))
-pl.output.daily <-
-  ggplot(daily, aes(x = count, y = group1, color = benchmark, shape = benchmark)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  # coord_flip() +
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
-  labs(title = "Average daily number of tweets",
-       x= "",
-       y= "")
-  # + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
-
-# Number of words per tweet #
-pl.output.words <-
-  ggplot(tweets, aes(x = ntoken, y = group, color = benchmark, shape = benchmark)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  # coord_flip()+
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
-  # scale_y_discrete(limits = rev(levels(group)))+
-  labs(title = "Average tweet length (words)",
-       x= "",
-       y= "")  # subtitle = "English language tweets only"
-  # + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
-
-# Combine output plots
-
-# pl.output <- pl.output.month / (pl.output.daily + pl.output.words) + 
-#   plot_annotation(title = "How much do supranational actors tweet?",
-#                   theme = theme(plot.title = element_text(hjust = 0, 
-#                                                           size = 14, face = "bold")))+
-#   plot_layout(heights = c(2, 1))
-
-
-pl.output <- pl.output.month + pl.output.daily  + 
-  # plot_annotation(title = "How much do supranational actors tweet?",
-  #                 theme = theme(plot.title = element_text(hjust = .5, 
-  #                                                         size = 14, face = "bold")))+
-  plot_layout(widths = c(2.5, 1))
-
-ggsave("./plots/DescriptiveOverview/Output.png", plot = pl.output, width = 30, height = 12, units = "cm")
-
-
+# IDEAS:
+# Correlate/Scatter daily/monthly n of press releases (Rauh 2021) and legislative output (Rauh 2020)
+# with daily tweets of EU_Commission handle - first one informs abiut overarching Comm startegy, second oe about responsibility clarification
 
 
 # Responsiveness ####
 
+# Example share for comp
+# sum(tweets$is_retweet[tweets$tweetsample == "IO"])/nrow(tweets[tweets$tweetsample == "IO",]) # Sanity check
+
+
 # Retweet shares
 pl.retweets <-
-  ggplot(tweets, aes(x = as.integer(is_retweet), y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets, aes(x = as.integer(is_retweet), y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   scale_x_continuous(labels = scales::label_percent(accuracy = 1L))+
-  labs(title = "... re-tweet other users?",
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
+  labs(title = "Retweets",
        x= "",
        y= "")+
   theme(plot.title = element_text(hjust = .5, face = "bold"))  
-sum(tweets$is_retweet[tweets$tweetsample == "IO"])/nrow(tweets[tweets$tweetsample == "IO",]) # Sanity check
 
 # Reply shares
 pl.replies <-
-  ggplot(tweets, aes(x = as.integer(is_reply), y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets, aes(x = as.integer(is_reply), y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   scale_x_continuous(labels = label_percent(accuracy = 1L))+
-  labs(title = "... reply to other users?",
-       x= "",
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
+  labs(title = "Replies",
+       x= "\nShare of overall tweets",
        y= "")+
   theme(plot.title = element_text(hjust = .5, face = "bold")) 
 
 # Quote shares
 pl.quotes <-
-  ggplot(tweets, aes(x = as.integer(is_quote), y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets, aes(x = as.integer(is_quote), y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   scale_x_continuous(labels = label_percent(accuracy = 1L))+
-  labs(title = "... quote other users?",
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
+  labs(title = "Quotes",
        x= "",
        y= "")+
   theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # Combined responsiveness plot
-pl.reponsiveness <- pl.retweets + pl.replies + pl.quotes +
-  plot_annotation(title = "How many tweets ...",
-                  theme = theme(plot.title = element_text(hjust = 0,
-                                                          size = 14, face = "bold")))
-ggsave("./plots/DescriptiveOverview/Responsiveness.png", plot = pl.reponsiveness, width = 30, height = 12, units = "cm")
+pl.reponsiveness <- pl.retweets + pl.replies + pl.quotes 
+  # + plot_annotation(title = "How many tweets ...",
+  #                 theme = theme(plot.title = element_text(hjust = 0,
+  #                                                         size = 14, face = "bold")))
+ggsave("./plots/DescriptiveOverview/InteractivityShares.png", plot = pl.reponsiveness, width = 30, height = 12, units = "cm")
+
+
+# IDEAS:
+# 1. Stacked area chart for EU over time, next to stacked bar by actor category (2:1)
+# 2. Concentration indices (Hirschmann) for retweeted, replied,a nd quoted user ids - plurality vs bubble (do we have the data?)
 
 
 
 # Responsiveness 2 ####
+
+# CHECK HOW INF VALUES ARE HANDLED HERE!
+
 pl.mentions <-
-  ggplot(tweets, aes(x = nmentions, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets, aes(x = nmentions, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Users mentions (@) per tweet",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 pl.hashtags <-
-  ggplot(tweets, aes(x = nhashtags, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets, aes(x = nhashtags, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Hashtags (#) per tweet",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
+
 pl.reponsiveness2 <- pl.mentions + pl.hashtags
-ggsave("./plots/DescriptiveOverview/Responsiveness2.png", plot = pl.reponsiveness2, width = 24, height = 10, units = "cm")
+ggsave("./plots/DescriptiveOverview/InteractivityMentionsHashtags.png", plot = pl.reponsiveness2, width = 24, height = 10, units = "cm")
 
 
 
@@ -426,47 +346,51 @@ ggsave("./plots/DescriptiveOverview/Responsiveness2.png", plot = pl.reponsivenes
 
 # Pictures
 pl.photos <-
-  ggplot(tweets[tweets$original, ], aes(x = as.integer(nphotos>0), y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = as.integer(nphotos>0), y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   scale_x_continuous(labels = label_percent(accuracy = 1L))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Share of tweets with embedded picture",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # Videos
 tweets$video <- (tweets$nvideos + tweets$ntube)>0 # Embeded and link-embedded videos
 pl.videos <-
-  ggplot(tweets[tweets$original, ], aes(x = as.integer(video), y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = as.integer(video), y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   scale_x_continuous(labels = label_percent(accuracy = 1L))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Share of tweets with embedded video",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 
 # Emojis
 pl.emojis <-
-  ggplot(tweets[tweets$original, ], aes(x = emojicount, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = emojicount, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Emojis / special symbols per tweet",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # External urls
 pl.urls <-
-  ggplot(tweets[tweets$original, ], aes(x = nexturl, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = nexturl, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "External links per tweet",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # Combined Plot
 pl.media <-
@@ -479,40 +403,44 @@ ggsave("./plots/DescriptiveOverview/MediaUsage.png", plot = pl.media, width = 24
 # Language ####
 
 pl.flesch <-
-  ggplot(tweets[tweets$original, ], aes(x = flesch, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = flesch, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
-  labs(title = "Flesch/Kincaid reading ease score",
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
+  labs(title = "Flesch reading ease score",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 pl.familiarity <-
-  ggplot(tweets[tweets$original, ], aes(x = familiarity, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = familiarity, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Familiarity of vocabulary",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 pl.verbal <-
-  ggplot(tweets[tweets$original, ], aes(x = verbal, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = verbal, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Verb-to-noun ratio",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 pl.sentiment <-
-  ggplot(tweets[tweets$original, ], aes(x = lsd, y = group, color = benchmark, shape = benchmark)) +
+  ggplot(tweets[tweets$original, ], aes(x = lsd, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = benchmarkcolors)+
-  scale_shape_manual(values = benchmarkshapes)+
+  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
   labs(title = "Sentiment (LSD)",
        x= "",
-       y= "")
+       y= "")+
+  theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # Combined plot
 pl.language <-
@@ -567,7 +495,8 @@ pl.engagement <-
 ggsave("./plots/DescriptiveOverview/Engagement.png", width = 20, height = 15, units = "cm")
 
 
-
+# Multivariate including UK & IO sample (which requires follower counts!)
+# bc language quality varies her and we could see whether engegement does so likewise ...
 
 
 # # Analyse daily tweet volume ####
@@ -632,3 +561,94 @@ ggsave("./plots/DescriptiveOverview/Engagement.png", width = 20, height = 15, un
 # 
 # ggsave("./plots/TweetVolumeWeekday.png", width = 16, height = 10, units = "cm")
 
+
+
+
+
+# Tweet output (OLD!) ####
+
+# # Monthly number of supranational tweets # 
+# eumonthly <- tweets %>% 
+#   filter(!benchmark) %>% # Only the EU Tweets
+#   group_by(month) %>% 
+#   summarise(count = n()) %>% 
+#   arrange(month)
+# 
+# # Ensure full range of months
+# months <- seq.Date(from = min(tweets$day[!tweets$benchmark]), 
+#                    to = max(tweets$day[!tweets$benchmark]), 
+#                    by = "days") %>% 
+#   as.character() %>% 
+#   str_remove("-[0-9]{2}$") %>% 
+#   unique() %>% 
+#   as.data.frame() %>% 
+#   rename(month = 1)
+# 
+# # Plotting markers
+# t.breaks <- months %>% 
+#   filter(str_detect(month, "-01")) # Only Januaries
+# t.breaks <- t.breaks[,1] # Atomic vector
+# t.labels <- str_remove(t.breaks, "-01")  
+# 
+# # Join series
+# eumonthly <- left_join(months, eumonthly, by = "month")
+# 
+# # Plot time series
+# pl.output.month <- 
+#   ggplot(eumonthly, aes(x=month, y = count, group = 1))+
+#   geom_bar(stat = "identity", width = .5, fill = "#003399", color = "#003399")+
+#   # geom_line()+
+#   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
+#   labs(title = "Number of tweets by supranational EU actors per month ",
+#        x = "",
+#        y = "")
+# 
+# 
+# # Daily number of tweets #
+# # NOT SURE: DOES THIS NEED TO BE GROUPED BY ACCOUNTS FIRST?
+# # SO AS TO SHOW VARIATION WITHIN GROUP?
+# daily <- tweets %>% 
+#   filter(!str_detect(tweetsample, "Random")) %>% 
+#   group_by(group1, day) %>% 
+#   summarise(count = n()) %>% 
+#   mutate(benchmark = !str_detect(as.character(group1), "^EU"))
+# pl.output.daily <-
+#   ggplot(daily, aes(x = count, y = group1, color = benchmark, shape = benchmark)) +
+#   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
+#   # coord_flip() +
+#   scale_color_manual(values = benchmarkcolors)+
+#   scale_shape_manual(values = benchmarkshapes)+
+#   labs(title = "Average daily number of tweets",
+#        x= "",
+#        y= "")
+# # + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
+# 
+# # Number of words per tweet #
+# pl.output.words <-
+#   ggplot(tweets, aes(x = ntoken, y = group, color = benchmark, shape = benchmark)) +
+#   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
+#   # coord_flip()+
+#   scale_color_manual(values = benchmarkcolors)+
+#   scale_shape_manual(values = benchmarkshapes)+
+#   # scale_y_discrete(limits = rev(levels(group)))+
+#   labs(title = "Average tweet length (words)",
+#        x= "",
+#        y= "")  # subtitle = "English language tweets only"
+# # + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
+# 
+# # Combine output plots
+# 
+# # pl.output <- pl.output.month / (pl.output.daily + pl.output.words) + 
+# #   plot_annotation(title = "How much do supranational actors tweet?",
+# #                   theme = theme(plot.title = element_text(hjust = 0, 
+# #                                                           size = 14, face = "bold")))+
+# #   plot_layout(heights = c(2, 1))
+# 
+# 
+# pl.output <- pl.output.month + pl.output.daily  + 
+#   # plot_annotation(title = "How much do supranational actors tweet?",
+#   #                 theme = theme(plot.title = element_text(hjust = .5, 
+#   #                                                         size = 14, face = "bold")))+
+#   plot_layout(widths = c(2.5, 1))
+# 
+# ggsave("./plots/DescriptiveOverview/Output.png", plot = pl.output, width = 30, height = 12, units = "cm")
