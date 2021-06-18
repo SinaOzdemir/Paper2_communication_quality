@@ -1,7 +1,7 @@
 #####################################################################
 # Project:  EU Tweet
-# Task:     Interpolate follower counts (collected from archive.org)
-# Author:   @ChRauh (25.052021)
+# Task:     Interpolate IO follower counts (collected from archive.org)
+# Author:   @ChRauh (18.06.2021)
 #####################################################################
 
 
@@ -12,13 +12,14 @@ library(zoo) # Time series stuff 1.8-8
 
 
 # Required lists ####
-files <- paste0("./data/FollowerCounts/EU/",
-                list.files("./data/FollowerCounts/EU/")) # Files with info on individual profiles
-accounts <- read_rds("./analysis_data/EU_account_list.RDS") # EU account info
-snapshots <- read_rds("./analysis_data/EU-snapshots.RDS") # Info on avilable archive.org snapshots
+files <- paste0("./data/FollowerCounts/IO/",
+                list.files("./data/FollowerCounts/IO/")) # Files with info on individual profiles
+accounts <- read_rds("./analysis_data/IO_account_list.RDS") # EU account info
+snapshots <- read_rds("./analysis_data/IO-snapshots.RDS") # Info on avilable archive.org snapshots
 accounts <- left_join(accounts, snapshots, by = "screen_name")
 rm(snapshots)
 
+accounts$snapshots[is.na(accounts$snapshots)] <- 0 # Cases with corrupt archive.org snapshot files
 
 
 # Interpolation of web.archive.org snapshot data ####
@@ -97,7 +98,7 @@ length(unique(followercounts$screen_name)) == length(files)
 
 
 
-# Interpolate followers foe accounts w/out archive.org snapshots ####
+# Interpolate followers for accounts w/out archive.org snapshots ####
 # Between account creation and scraping date
 
 nosnaps <- accounts %>% 
@@ -142,9 +143,9 @@ for (i in 1:nrow(nosnaps)) {
 # Clean up
 rm(list = c("series", "series.z", "interpolation"))
 
-# Cross-cehck
-length(unique(followercounts$screen_name)) == 115
+# Cross-check
+length(unique(followercounts$screen_name)) == 55
 
 
 # Export follower counts ####
-write_rds(followercounts, "./analysis_data/FollowerCountsInterpolated_EU.RDS")
+write_rds(followercounts, "./analysis_data/FollowerCountsInterpolated_IO.RDS")

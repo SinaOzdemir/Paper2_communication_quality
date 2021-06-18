@@ -15,8 +15,9 @@ source("./Scripts/EUfollowerCounts/PastTwitter.R") # See https://github.com/ChRa
 
 
 # List of EU accounts ####
-# created by 0_BuildEUtweetCorpus.R
-accounts <- read_rds("./analysis_data/IO_account_list.RDS")
+# created by 0_BuildIOtweetCorpus.R
+accounts <- read_rds("./analysis_data/IO_account_list.RDS") %>% 
+  filter(screen_name != "ASEAN_SME") # Faulty JSON file on archive.org
 
 accounts$snapshots <- as.numeric(NA)
 
@@ -29,7 +30,7 @@ for (i in 1:nrow(accounts)) {
   print(paste0("Account ", i, " of ", nrow(accounts),"; ", accounts$screen_name[i]))
   
   # Establish connection for saving
-  filename <- paste0("./data/FollowerCounts/EU/", accounts$screen_name[i], ".RDS")
+  filename <- paste0("./data/FollowerCounts/IO/", accounts$screen_name[i], ".RDS")
   
   # Check wehther file has already been created
   # if yes continue with next profile
@@ -64,6 +65,6 @@ for (i in 1:nrow(accounts)) {
 
 # Store info on avaliable snapshots ####
 archive <- accounts %>% select(screen_name, snapshots)
-write_rds(archive, "./analysis_data/EU-snapshots.RDS")
+write_rds(archive, "./analysis_data/IO-snapshots.RDS")
 
 
