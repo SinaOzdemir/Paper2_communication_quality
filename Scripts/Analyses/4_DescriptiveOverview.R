@@ -1,7 +1,7 @@
 ###############################################################
 # Project:    EU Tweet
 # Task:       Visual descriptive overview of EU Tweet Sample
-#             against benchmark sample
+#             against benchmark samples
 # Author:     Christian Rauh (31.05.2021)
 ##############################################################
 
@@ -22,12 +22,13 @@ tweets <- read_rds("./data/AnalyticData_AllSamples.RDS")
 # Filter some accounts
 tweets <- tweets %>% 
   filter(screen_name != "HMRCcustomers") %>%  # Customer support account
+  filter(screen_name != "DVLAgovuk") %>%      # Online service account of the Driver&Vehicle licensing agency
   filter(screen_name != "nsandihelp")         # A help desk (what is this org anyway?)
 
 
 # Add personal institutional distinction for the IO sample
-# Relying on CR coding for now
-iopersonal <- read.csv2("./analysis_data/IO_account_coding.csv") %>% 
+# Coding by CR and KBH consistent
+iopersonal <- read.csv2("./analysis_data/IO_account_coding_CR.csv") %>% 
   filter(personal == 1) 
 iopersonal <- iopersonal[,1] # Screen names to atomic vector
 tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "IO (pers. account)"
@@ -44,7 +45,7 @@ tweets$group1 <- tweets$tweetsample %>%
                     "IO\n(inst. account)",
                     "IO\n(pers. account)",
                     "Random\nTweets")) %>% 
-  fct_rev() # Reverse, so that EU alsways comes out on top
+  fct_rev() # Reverse, so that EU always comes out on top (for horizontal plots, reverse in ggplot call)
 
 tweets$group2 <- tweets$tweetsample %>% 
   str_remove(" .*$") %>% # Remove pers/inst distinction (for color coding later)
@@ -257,89 +258,6 @@ ggsave("./plots/DescriptiveOverview/DailyTweets.png", plot = pl.daily, width = 3
 # with daily tweets of EU_Commission handle - first one informs abiut overarching Comm startegy, second oe about responsibility clarification
 
 
-# Responsiveness ####
-
-# Example share for comp
-# sum(tweets$is_retweet[tweets$tweetsample == "IO"])/nrow(tweets[tweets$tweetsample == "IO",]) # Sanity check
-
-
-# Retweet shares
-pl.retweets <-
-  ggplot(tweets, aes(x = as.integer(is_retweet), y = group1, color = group2)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
-  scale_x_continuous(labels = scales::label_percent(accuracy = 1L))+
-  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Retweets",
-       x= "",
-       y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))  
-
-# Reply shares
-pl.replies <-
-  ggplot(tweets, aes(x = as.integer(is_reply), y = group1, color = group2)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
-  scale_x_continuous(labels = label_percent(accuracy = 1L))+
-  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Replies",
-       x= "\nShare of overall tweets",
-       y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold")) 
-
-# Quote shares
-pl.quotes <-
-  ggplot(tweets, aes(x = as.integer(is_quote), y = group1, color = group2)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
-  scale_x_continuous(labels = label_percent(accuracy = 1L))+
-  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Quotes",
-       x= "",
-       y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
-
-# Combined responsiveness plot
-pl.reponsiveness <- pl.retweets + pl.replies + pl.quotes 
-  # + plot_annotation(title = "How many tweets ...",
-  #                 theme = theme(plot.title = element_text(hjust = 0,
-  #                                                         size = 14, face = "bold")))
-ggsave("./plots/DescriptiveOverview/InteractivityShares.png", plot = pl.reponsiveness, width = 30, height = 12, units = "cm")
-
-
-# IDEAS:
-# 1. Stacked area chart for EU over time, next to stacked bar by actor category (2:1)
-# 2. Concentration indices (Hirschmann) for retweeted, replied,a nd quoted user ids - plurality vs bubble (do we have the data?)
-
-
-
-# Responsiveness 2 ####
-
-# CHECK HOW INF VALUES ARE HANDLED HERE!
-
-pl.mentions <-
-  ggplot(tweets, aes(x = nmentions, y = group1, color = group2)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
-  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Users mentions (@) per tweet",
-       x= "",
-       y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
-pl.hashtags <-
-  ggplot(tweets, aes(x = nhashtags, y = group1, color = group2)) +
-  stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
-  scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
-  facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Hashtags (#) per tweet",
-       x= "",
-       y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
-
-pl.reponsiveness2 <- pl.mentions + pl.hashtags
-ggsave("./plots/DescriptiveOverview/InteractivityMentionsHashtags.png", plot = pl.reponsiveness2, width = 24, height = 10, units = "cm")
-
-
 
 # Media usage ####
 # in orignal (self-authored) tweets only
@@ -400,6 +318,7 @@ ggsave("./plots/DescriptiveOverview/MediaUsage.png", plot = pl.media, width = 24
 
 
 
+
 # Language ####
 
 pl.flesch <-
@@ -443,8 +362,12 @@ pl.sentiment <-
   theme(plot.title = element_text(hjust = .5, face = "bold"))
 
 # Combined plot
+# pl.language <-
+#   (pl.flesch + pl.familiarity) / (pl.verbal + pl.sentiment) +
+#   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes) with English-language content.")
+
 pl.language <-
-  (pl.flesch + pl.familiarity) / (pl.verbal + pl.sentiment) +
+  (pl.flesch + pl.familiarity + pl.verbal) +
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes) with English-language content.")
   
 ggsave("./plots/DescriptiveOverview/Language.png", plot = pl.language, width = 24, height = 20, units = "cm")
