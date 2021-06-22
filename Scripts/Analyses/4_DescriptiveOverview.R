@@ -194,7 +194,21 @@ avid.tweeters <- avid.tweeters %>%
   arrange(desc(group1), desc(mean.daily.tweets))
 
 write_rds(avid.tweeters, "./analysis_data/AverageDailyTweetsByAccount.RDS")
+
+# Most avid and most lazy EU tweeters
+eutweeters <- avid.tweeters %>% 
+  filter(group2 == "EU") %>% 
+  arrange(desc(mean.daily.tweets))
+
+head(eutweeters, 10)
+tail(eutweeters, 10)
+
+# SD across account by sample
+avid.tweeters %>% group_by(group2) %>% summarise(sd(mean.daily.tweets))
+
+rm(eutweeters)
 rm(avid.tweeters)
+
 
 # Add group info to daily tweet data
 daily <- daily %>% 
@@ -228,7 +242,8 @@ pl.daily.eu <- # The plot
   coord_cartesian(ylim = c(0, 3.7))+ 
   scale_x_discrete(breaks = t.breaks, labels = t.labels) +
   labs(title = "Average daily number of tweets\nby supranational EU accounts over time (smoothed)",
-       x= "", y = "")
+       x= "", y = "")+
+  theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
 
 # Daily n of tweets in comparison
@@ -251,7 +266,7 @@ pl.daily <-
   pl.daily.eu + pl.daily.comp  + 
   plot_layout(widths = c(2, 1))
 
-ggsave("./plots/DescriptiveOverview/DailyTweets.png", plot = pl.daily, width = 30, height = 12, units = "cm")
+ggsave("./plots/DescriptiveOverview/DailyTweets.png", plot = pl.daily, width = 20, height = 10, units = "cm")
 
 # IDEAS:
 # Correlate/Scatter daily/monthly n of press releases (Rauh 2021) and legislative output (Rauh 2020)
@@ -321,35 +336,68 @@ ggsave("./plots/DescriptiveOverview/MediaUsage.png", plot = pl.media, width = 24
 
 # Language ####
 
+# Get info on used languages
+eu <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>% 
+  select(tweetlanguage, tweetlanguages, texten)
+
+(sum(str_count(eu$tweetlanguages, "en"))/nrow(eu))*100 # Share of tweets with at least one English sentence
+(sum(eu$tweetlanguages == "en")/nrow(eu))*100 # Share of tweets with only english sentences
+
+langs <- paste(eu$tweetlanguages, collapse = ", ") %>%  # All detected languages
+  str_split(", ") %>% # Atomic representation
+  as.data.frame() %>% 
+  rename(language = 1) %>% 
+  filter(language != "") %>% 
+  group_by(language) %>% 
+  summarise(count = n()) %>% 
+  mutate(share = round((count/nrow(eu))*100, 2)) %>% # Share of tweets including respective language
+  arrange(desc(share))
+
+head(langs, 10)
+
+rm(eu)
+rm(langs)
+gc()
+
+
+# Understandability 
+
 pl.flesch <-
   ggplot(tweets[tweets$original, ], aes(x = flesch, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
   scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Flesch reading ease score",
+  labs(title = "Flesch\nreading ease score",
        x= "",
        y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
+  theme(plot.title = element_text(hjust = .5, face = "bold"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
 pl.familiarity <-
   ggplot(tweets[tweets$original, ], aes(x = familiarity, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
   scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Familiarity of vocabulary",
+  labs(title = "Familiarity of vocabulary\n(Google books freq.)",
        x= "",
        y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
+  theme(plot.title = element_text(hjust = .5, face = "bold"))+
+  theme(axis.text.x = element_text(angle = 90, vjust = .5),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
 pl.verbal <-
   ggplot(tweets[tweets$original, ], aes(x = verbal, y = group1, color = group2)) +
   stat_summary(geom = "pointrange", fun.data = "mean_cl_boot", size = .7) + 
   scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
   facet_wrap(.~ reorder(group2, desc(group2)), scales = "free_y", ncol = 1, strip.position = "right")+
-  labs(title = "Verb-to-noun ratio",
+  labs(title = "Verb-to-noun\nratio",
        x= "",
        y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
+  theme(plot.title = element_text(hjust = .5, face = "bold"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
 pl.sentiment <-
   ggplot(tweets[tweets$original, ], aes(x = lsd, y = group1, color = group2)) +
@@ -359,7 +407,9 @@ pl.sentiment <-
   labs(title = "Sentiment (LSD)",
        x= "",
        y= "")+
-  theme(plot.title = element_text(hjust = .5, face = "bold"))
+  theme(plot.title = element_text(hjust = .5, face = "bold"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
 # Combined plot
 # pl.language <-
@@ -370,7 +420,7 @@ pl.language <-
   (pl.flesch + pl.familiarity + pl.verbal) +
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes) with English-language content.")
   
-ggsave("./plots/DescriptiveOverview/Language.png", plot = pl.language, width = 24, height = 20, units = "cm")
+ggsave("./plots/DescriptiveOverview/Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
 
 
 
