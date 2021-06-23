@@ -423,8 +423,27 @@ pl.language <-
 ggsave("./plots/DescriptiveOverview/Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
 
 
+# Understandability across actors
 
+euclear <- tweets %>% 
+  filter(group2 == "EU" & en_av) %>% # Only EU tweets with english text
+  mutate(personal = str_detect(group1, fixed("pers. account"))) %>% # Mark personal accounts
+  select(screen_name, flesch, familiarity, verbal, personal) %>% 
+  filter(!is.na(verbal)) %>% # Cases in which eitiher no verbs or no nouns could be found
+  filter(!is.infinite(verbal)) %>% # Cases with zero nouns 
+  mutate(flesch = scale(flesch), # Standardize understanbility measures
+         familiarity = scale(familiarity),
+         verbal = scale(verbal)) %>% 
+  mutate(clarity = (flesch + familiarity + verbal)/3) %>% # average clarity score
+  group_by(screen_name) %>% 
+  summarise(clarity = mean(clarity, na.rm = T),
+            personal = mean(personal)) %>% 
+  arrange(desc(clarity))
 
+head(euclear)
+tail(euclear)
+
+t.test(euclear$clarity[euclear$personal == 0], euclear$clarity[euclear$personal == 1])
 
 
 
