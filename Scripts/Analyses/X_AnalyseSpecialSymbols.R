@@ -8,9 +8,8 @@ ecemo <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>%
   rename(text_raw = text)
 
 
-# Emoji fun ####
-
-# Most frequent emojies - but country flags ... external list of regional indicators followed by each other ...
+# Most frequent emojies - 
+# but country flags ... external list of regional indicators followed by each other ...
 
 
 
@@ -127,6 +126,19 @@ emocount <- flagcounts %>%
   rbind(emojiscount) %>% 
   arrange(desc(count))
 
+emocount$share <- (emocount$count / nrow(ecemo)) * 100
+
+# Flags
+# Two combined symbols ...
+emocount$double <- nchar(emocount$emoji)==2
+
+flags <- emocount %>% filter(double) %>% 
+  filter(emoji != "\U0001f1ea\U0001f1fa") %>% # EU flag
+  summarise(sum(share))
+
+
+# Export
+write_rds(emocount, "./analysis_data/EU-Emoji-Totals.RDS")
 
 
 # And plot 
