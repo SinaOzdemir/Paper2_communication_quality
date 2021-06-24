@@ -12,6 +12,8 @@ library(scales) # 1.1.1
 library(corrgram) 
 library(coefplot)
 library(margins)
+library(kableExtra) # 1.3.1
+library(utf8)
 
 
 
@@ -71,40 +73,6 @@ account.types <- account.types %>%
   filter(!(screen_name == "BaldwinMatthew_" & group2 == "Random")) # Crazy coincidence!
 sum(duplicated(account.types$screen_name))
 
-# # Nicer group names for plotting
-# tweets$group <- tweets$tweetsample
-# tweets$group[tweets$group == "EU (inst. account)"] <- "EU supranational\n(institutional accounts)"
-# tweets$group[tweets$group == "EU (pers. account)"] <- "EU supranational\n(personal accounts)"
-# tweets$group[tweets$group == "IO"] <- "International Organisations\n(institutional accounts)"
-# tweets$group[tweets$group == "UK"] <- "UK government accounts"
-# tweets$group[tweets$group == "TWT"] <- "Random Tweets"
-# tweets$group <- factor(tweets$group, 
-#                        levels = c("Random Tweets",
-#                                   "UK government accounts",
-#                                   "International Organisations\n(institutional accounts)",
-#                                   "EU supranational\n(personal accounts)",
-#                                   "EU supranational\n(institutional accounts)"))
-
-
-# Number of available tweets and accounts per sample
-cases <- rbind(as.data.frame(table(tweets$tweetsample)),
-               as.data.frame(table(tweets$group2))) %>% 
-  rename(Sample = 1,
-         Tweets = 2) %>% 
-  mutate(Sample = as.character(Sample))
-
-cases$Accounts <- NA
-for (i in 1:nrow(cases)) {
-  if (i <= 7){
-    cases$Accounts[i] <- length(unique(tweets$screen_name[tweets$tweetsample == cases$Sample[i]]))
-  } else {
-    cases$Accounts[i] <- length(unique(tweets$screen_name[str_detect(tweets$tweetsample, cases$Sample[i])]))
-  }
-}
-writeLines(stargazer(cases, type = "html", summary = F, rownames = F), 
-           "./tables/TweetSampleOverview.html")
-rm(cases)
-
 
 # Correct some coding nuissances
 # Probably correct downstream!
@@ -160,6 +128,7 @@ theme_set(theme_light() +
             theme(legend.position = "none",
                   axis.text = element_text(color = "black"),
                   plot.title = element_text(size=10, face = "bold"),
+                  plot.subtitle = element_text(size=10),
                   panel.grid.minor = element_blank()))
 
 
@@ -245,20 +214,106 @@ ttexts <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>%
 viral <- viral %>%  left_join(ttexts, by = "id")
 
 # Hmpf ... 'hello world' tweets - entirely driven by underestimating the follower count
-# Can we filter somehow (ifollowers > 1; only when snapshots are available?)
+# We need to filter - only when and after snapshots are available
+
+# Filter sample along snapshot dates
+
+# Snapshot info
+snapav <- rbind(read_rds("./analysis_data/FollowerCountsInterpolated_EU.RDS"), # Follower counts
+                read_rds("./analysis_data/FollowerCountsInterpolated_IO.RDS"),
+                read_rds("./analysis_data/FollowerCountsInterpolated_UK.RDS")) %>%
+  filter(follower_count != 0 & # Drop obs without follower count measurement
+           !is.na(follower_count)) %>% 
+  select(-follower_count_interpolated) %>% 
+  group_by(screen_name) %>% 
+  summarise(earliest = min(date), # Earliest snapshot by account
+            snaps = n()) %>% # Number of snaps by account
+  filter(snaps > 1) # At least two snapshots need to be available
+  
+# Filter users
+tweets2 <- tweets %>% filter(screen_name %in% snapav$screen_name)
+
+# Filter tweets by earliest snapshot
+df.enga <- data.frame()
+
+for (account in unique(tweets2$screen_name)) {
+  
+  # Progres
+  print(account)
+  
+  # Select and filter tweets
+  dat <- tweets2 %>% 
+    filter(screen_name == account) %>% # All Tweets from that account
+    filter(day >= snapav$earliest[snapav$screen_name == account]) # Only from ealiest snapshot date
+  
+  # Append to target
+  df.enga <- rbind(df.enga, dat)
+}
+
+rm(dat)
+gc()
+
+
+# The most viral supranational tweets in that reduced sample
+
+hist(df.enga$enga_ratio[df.enga$group2 == "EU"])
+
+viral <- df.enga %>% 
+  filter(group2 == "EU") %>% 
+  select(c(id, day, screen_name, ifollowers, enga_ratio, 
+           like_count, like_ratio, retweet_count, retweet_ratio,
+           quote_count, quote_ratio, reply_count, reply_ratio)) %>% 
+  arrange(desc(enga_ratio)) %>% 
+  head(10)
+
+ttexts <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>% 
+  select(id, text) %>% 
+  filter(id %in% viral$id)
+
+viral <- viral %>%  left_join(ttexts, by = "id")
+
+# Save most viral tweets for presentation
+
+viral2 <- viral %>% 
+  mutate(engagements = like_count + retweet_count + quote_count + reply_count) %>% 
+  select(c(text, screen_name, ifollowers, like_count, retweet_count, quote_count, reply_count, engagements))
+
+viral2$text <- viral2$text %>% # Manual unicode emojis to html - for fucks sake!
+  str_replace_all("\U0001F436", "&#x1F436;") %>% 
+  str_replace_all("\U0001f6b6\u200D\u2640\uFE0F", "&#x1F6B6;&#x200D;&#x2640;&#xFE0F;") %>% 
+  str_replace_all("\U0001F6B2", "&#x1F6B2;") %>%
+  str_replace_all("\U0001F447", "&#128071;") %>%
+  str_replace_all("\U0001F44D", "&#128077;") %>%
+  str_replace_all("\U0001F44F", "&#x1F44F;") %>%
+  str_replace_all("\U0001F64F", "&#x1F64F;") %>%
+  str_replace_all("\U0001f1ea\U0001f1fa", "&#x1F1EA;&#x1F1FA;") %>%
+  str_replace_all("\U0001F6C3", "&#x1F6C3;") %>%
+  str_replace_all("\U0001F4B6", "&#x1F4B6;") %>%
+  str_replace_all("\U00023F0", "&#x23F0;") %>%
+  str_replace_all("\U0001F4AA", "&#x1F4AA;") %>%
+  str_replace_all("\U0001F3E2", "&#x1F3E2;") %>%
+  str_replace_all("\U0001F40A", "&#x1F40A;") %>%
+  str_replace_all("\U0001f992", "&#x1F992;") %>%
+  str_replace_all("\U0001F418", "&#x1F418;") %>%
+  str_replace_all("\U0001F418", "&#x1F418;") 
+
+# Export
+viral.out <- viral2 %>%
+  kable(col.names = c("Tweet", "Account",
+                      "Interpolated<br>followers",
+                      "Likes", "Retweets", "Quotes", "Replies", "Engagements"), escape =F) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+save_kable(viral.out, "./tables/ViralTweets.html")
 
 
 
 
 # Aggregate engament ratio over time
 
-
-
-
 pl.enga.time <- # The plot
-  ggplot(tweets %>% filter(group2 == "EU"), aes(x = month, y = enga_ratio, group = 1))+
+  ggplot(df.enga %>% filter(group2 == "EU" & day >= as.Date("2011-01-01", "%Y-%m-%d")), aes(x = month, y = enga_ratio, group = 1))+
   # geom_point()+
-  stat_summary(geom = "line", fun = mean)+
+  stat_summary(geom = "line", fun = mean, "#003399")+
   # stat_smooth(color = "#003399")+
   # geom_rug(sides = "b", alpha = .2)+
   # scale_y_continuous(breaks = seq(0,3.5,0.5))+
@@ -269,29 +324,12 @@ pl.enga.time <- # The plot
        x= "", y = "")+
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
-
-
-# Probably this should happen in descriptive overview with benchmark samples
-# Hard to interpret the absolute values
+ggsave("./plots/UserEngagement/UserEngagementOverTime.png", plot = pl.enga.time, width = 20, height = 12, units = "cm")
 
 
 
+# HERE
 
-# Plotting markers
-t.breaks <- tweets %>% 
-  filter(str_detect(month, "-01")) %>% # Only Januaries
-  select(month) %>% 
-  mutate(help = "help") %>% 
-  unique() %>% 
-  as.data.frame()
-t.breaks <- t.breaks[ ,1]  # Atomic vector
-t.labels <- str_remove(t.breaks, "-01")  
-
-
-# Targeted data
-# Only original tweets, excluding May 2021 
-# (as we have only three days here, indicating drops just due to the incomplete month)
-df.enga <- tweets %>% filter(original) %>% filter(day < as.Date("2021-05-01", format = "%Y-%m-%d"))
 
 
 # Likes
