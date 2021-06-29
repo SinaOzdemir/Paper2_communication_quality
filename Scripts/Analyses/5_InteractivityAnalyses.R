@@ -1,7 +1,7 @@
 ###############################################################
 # Project:    EU Tweet
 # Task:       Analyse interactivity (responsiveness) patterns
-# Author:     Christian Rauh (21.06.2021)
+# Author:     Christian Rauh (29.06.2021)
 ##############################################################
 
 # Packages ####
@@ -21,12 +21,13 @@ tweets <- read_rds("./data/AnalyticData_AllSamples.RDS")
 # Filter some accounts
 tweets <- tweets %>% 
   filter(screen_name != "HMRCcustomers") %>%  # Customer support account
+  filter(screen_name != "DVLAgovuk") %>%      # Online service account of the Driver&Vehicle licensing agency
   filter(screen_name != "nsandihelp")         # A help desk (what is this org anyway?)
 
 
 # Add personal institutional distinction for the IO sample
 # Coding by CR and KBH consistent
-iopersonal <- read.csv2("./analysis_data/IO_account_coding.csv") %>% 
+iopersonal <- read.csv2("./analysis_data/IO_account_coding_CR.csv") %>% 
   filter(personal == 1) 
 iopersonal <- iopersonal[,1] # Screen names to atomic vector
 tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "IO (pers. account)"
@@ -65,41 +66,6 @@ account.types <- account.types %>%
   filter(!(screen_name == "BaldwinMatthew_" & group2 == "Random")) # Crazy coincidence!
 sum(duplicated(account.types$screen_name))
 
-# # Nicer group names for plotting
-# tweets$group <- tweets$tweetsample
-# tweets$group[tweets$group == "EU (inst. account)"] <- "EU supranational\n(institutional accounts)"
-# tweets$group[tweets$group == "EU (pers. account)"] <- "EU supranational\n(personal accounts)"
-# tweets$group[tweets$group == "IO"] <- "International Organisations\n(institutional accounts)"
-# tweets$group[tweets$group == "UK"] <- "UK government accounts"
-# tweets$group[tweets$group == "TWT"] <- "Random Tweets"
-# tweets$group <- factor(tweets$group, 
-#                        levels = c("Random Tweets",
-#                                   "UK government accounts",
-#                                   "International Organisations\n(institutional accounts)",
-#                                   "EU supranational\n(personal accounts)",
-#                                   "EU supranational\n(institutional accounts)"))
-
-
-# Number of available tweets and accounts per sample
-cases <- rbind(as.data.frame(table(tweets$tweetsample)),
-               as.data.frame(table(tweets$group2))) %>% 
-  rename(Sample = 1,
-         Tweets = 2) %>% 
-  mutate(Sample = as.character(Sample))
-
-cases$Accounts <- NA
-for (i in 1:nrow(cases)) {
-  if (i <= 7){
-    cases$Accounts[i] <- length(unique(tweets$screen_name[tweets$tweetsample == cases$Sample[i]]))
-  } else {
-    cases$Accounts[i] <- length(unique(tweets$screen_name[str_detect(tweets$tweetsample, cases$Sample[i])]))
-  }
-}
-writeLines(stargazer(cases, type = "html", summary = F, rownames = F), 
-           "./tables/TweetSampleOverview.html")
-rm(cases)
-
-
 # Correct some coding nuissances
 # Probably correct downstream!
 tweets$nexturl[is.na(tweets$nexturl)] <- 0 # there were just none
@@ -121,7 +87,6 @@ tweets$month <- str_extract(as.character(tweets$day), "[0-9]{4}-[0-9]{2}")
 # tweets <- tweets %>% sample_n(10000)
 
 
-
 # Overarching ggplot params ####
 
 theme_set(theme_light() +
@@ -132,6 +97,7 @@ theme_set(theme_light() +
 
 benchmarkcolors <- c("#003399", "#FFCC00") # EU, all the way down ...
 benchmarkshapes <- c(18, 19)
+
 
 
 
@@ -185,12 +151,6 @@ pl.reponsiveness <- pl.retweets + pl.replies + pl.quotes
 ggsave("./plots/DescriptiveOverview/InteractivityShares.png", plot = pl.reponsiveness, width = 30, height = 12, units = "cm")
 
 
-# IDEAS:
-# 1. Stacked area chart for EU over time, next to stacked bar by actor category (2:1)
-# 2. Concentration indices (Hirschmann) for retweeted, replied,a nd quoted user ids - plurality vs bubble (do we have the data?)
-
-
-
 # Responsiveness 2 ####
 
 # CHECK HOW INF VALUES ARE HANDLED HERE!
@@ -216,4 +176,12 @@ pl.hashtags <-
 
 pl.reponsiveness2 <- pl.mentions + pl.hashtags
 ggsave("./plots/DescriptiveOverview/InteractivityMentionsHashtags.png", plot = pl.reponsiveness2, width = 24, height = 10, units = "cm")
+
+
+
+
+# IDEAS:
+# 1. Stacked area chart for EU over time, next to stacked bar by actor category (2:1)
+# 2. Concentration indices (Hirschmann) for retweeted, replied,a nd quoted user ids - plurality vs bubble (do we have the data?)
+
 

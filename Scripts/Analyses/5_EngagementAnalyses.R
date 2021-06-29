@@ -550,6 +550,7 @@ ggplot(coefs, aes(y = name2))+
 ggsave("./plots/UserEngagement/OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
 
 
+
 # Substantial effect sizes
 
 sds$SD[sds$variable == "enga_ratio"]
@@ -567,12 +568,15 @@ effect <- (delta * coef$Value[coef$Coefficient == "pic"])
 substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
 substantial
 
+mean(df$pic[df$io == F & df$uk == F])
+
 # One additional emoji
 delta <- 1/(sds$SD[sds$variable == "emojicount"])
 effect <- (delta * coef$Value[coef$Coefficient == "emojicount"])
 substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
 substantial
 
+mean(df$emojicount[df$io == F & df$uk == F])
 
 # Ext url
 delta <- 1/(sds$SD[sds$variable == "url"])
@@ -594,11 +598,26 @@ effect <- (delta * coef$Value[coef$Coefficient == "nhashtags"])
 substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
 substantial
 
+mean(df$nhashtags[df$io == F & df$uk == F])
+
+
 # Personal account
-delta <- (sds$SD[sds$variable == "personal"])/1
+delta <- 1/(sds$SD[sds$variable == "personal"])
 effect <- (delta * coef$Value[coef$Coefficient == "personal"])
 substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
 substantial
+
+# IO account
+delta <- 1/(sds$SD[sds$variable == "io"])
+effect <- (delta * coef$Value[coef$Coefficient == "io"])
+substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
+substantial
+
+
+
+
+
+
 
 
 
