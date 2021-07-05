@@ -1,0 +1,80 @@
+---
+title: "Oezdemir_rauh_appendix2a_02072021"
+author: "Sina Ozdemir"
+date: "02 07 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+
+packs<- c("tidyverse","rtweet","kableExtra","here")
+lapply(packs,library, character.only = T)
+api1_token<- create_token(app = "follower sampler",
+                          consumer_key = "9JLJWaTE8XreMk8AXmKJmcD02",
+                          consumer_secret = "4Q1fKPkDL5UVzcMBl4kBxH3DgLuY1rt1Gvc2O05kBKV8k1JEPp",
+                          access_token = "1151438784384421888-O9685r93IN2GswCSChdKYT8c6XoWEt",
+                          access_secret = "y0PfG51plTa6d4U2oj6R0CBOYqPl6PUgpFRv48v22Z0WA",
+                          set_renv = F)
+
+data_path<- here("data","corpii")
+```
+
+## the supranational EU accounts:
+
+
+```{r eu_accounts}
+
+eu_accounts<- readRDS(file = file.path(data_path,"EU_corpus.RDS")) %>% pull(screen_name) %>% unique()
+
+eu_accounts_meta<- rtweet::lookup_users(users = eu_accounts,token = api1_token)
+
+eu_accounts_meta_trimmed<- eu_accounts_meta %>%
+  select(name, description, screen_name,statuses_count,followers_count,friends_count,account_created_at) %>%
+  mutate(screen_name = paste0("@",.$screen_name),
+         name = str_remove_all(string = .$name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
+
+# 
+# eu_accounts_meta_trimmed %>%
+#   kbl(caption = "Supranational EU twitter accounts list",
+#       col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date")) %>%
+#   kable_classic(full_width = T)
+# 
+
+eu_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+```
+## The UK Executive Accounts:
+
+
+```{r uk_accounts}
+uk_account_data<- readRDS(file.path(data_path,"UK_corpus.RDS")) %>% pull(screen_name) %>% unique()
+
+
+uk_accounts_meta<- rtweet::lookup_users(users = uk_account_data,token = api1_token)
+
+uk_accounts_meta_trimmed<- uk_accounts_meta %>%  select(name, description, screen_name,statuses_count,followers_count,friends_count,account_created_at) %>%
+  mutate(screen_name = paste0("@",.$screen_name),
+         name = str_remove_all(string = .$name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
+
+
+uk_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+
+```
+```{r io_accounts}
+
+io_accounts<- readRDS(file.path(data_path, "IO_corpus.RDS")) %>% pull(user_username) %>% unique()
+
+io_accounts_meta<- rtweet::lookup_users(users = io_accounts,token = api1_token)
+
+io_accounts_meta_trimmed <- io_accounts_meta %>%  select(name, description, screen_name,statuses_count,followers_count,friends_count,account_created_at) %>%
+  mutate(screen_name = paste0("@",.$screen_name),
+         name = str_remove_all(string = .$name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
+
+
+io_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+
+```
+
