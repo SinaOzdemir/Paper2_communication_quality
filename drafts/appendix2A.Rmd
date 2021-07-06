@@ -2,7 +2,9 @@
 title: "Oezdemir_rauh_appendix2a_02072021"
 author: "Sina Ozdemir"
 date: "02 07 2021"
-output: word_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -18,14 +20,17 @@ api1_token<- create_token(app = "follower sampler",
                           set_renv = F)
 
 data_path<- here("data","corpii")
+
+analysis_data<- readRDS(file = file.path(data_path,"AnalyticData_AllSamples.RDS"))
 ```
 
-## the supranational EU accounts:
-
+# The supranational EU twitter accounts:
 
 ```{r eu_accounts}
 
-eu_accounts<- readRDS(file = file.path(data_path,"EU_corpus.RDS")) %>% pull(screen_name) %>% unique()
+eu_accounts<- analysis_data %>%
+  filter(str_detect(tweetsample, fixed("EU "))) %>% 
+  pull(screen_name) %>% unique()
 
 eu_accounts_meta<- rtweet::lookup_users(users = eu_accounts,token = api1_token)
 
@@ -35,21 +40,27 @@ eu_accounts_meta_trimmed<- eu_accounts_meta %>%
          name = str_remove_all(string = .$name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
          description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
 
-# 
-# eu_accounts_meta_trimmed %>%
-#   kbl(caption = "Supranational EU twitter accounts list",
-#       col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date")) %>%
-#   kable_classic(full_width = T)
-# 
 
-eu_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+eu_accounts_meta_trimmed %>%
+  kbl(caption = "",
+      col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date")) %>%
+ kable_styling(bootstrap_options = c("condensed"),position = "center",html_font = "cambri")
+
+write.table(x = eu_accounts_meta_trimmed,file = file.path(data_path,"EU_analysis_sample.csv"),sep = ",",col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),row.names = F,quote = T,fileEncoding = "UTF-8")
+
+
 ```
-## The UK Executive Accounts:
+# The UK executive branch Twitter accounts:
 
 
 ```{r uk_accounts}
-uk_account_data<- readRDS(file.path(data_path,"UK_corpus.RDS")) %>% pull(screen_name) %>% unique()
-
+uk_account_data<-  analysis_data %>%
+  filter(str_detect(tweetsample, fixed("UK "))) %>% 
+  filter(screen_name != "HMRCcustomers") %>%  
+  filter(screen_name != "DVLAgovuk") %>%  
+  filter(screen_name != "nsandihelp")  %>% 
+  pull(screen_name) %>%
+  unique()
 
 uk_accounts_meta<- rtweet::lookup_users(users = uk_account_data,token = api1_token)
 
@@ -59,12 +70,24 @@ uk_accounts_meta_trimmed<- uk_accounts_meta %>%  select(name, description, scree
          description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
 
 
-uk_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+uk_accounts_meta_trimmed %>%
+  kbl(caption = "The UK executive branch twitter accounts list",
+      col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date")) %>%
+ kable_styling(bootstrap_options = c("condensed"),position = "center",html_font = "cambri")
 
+
+
+write.table(x = uk_accounts_meta_trimmed,file = file.path(data_path,"UK_analysis_sample.csv"),sep = ",",col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),row.names = F,quote = T,fileEncoding = "UTF-8")
 ```
+
+# International organizations twitter accounts:
+
+
 ```{r io_accounts}
 
-io_accounts<- readRDS(file.path(data_path, "IO_corpus.RDS")) %>% pull(user_username) %>% unique()
+io_accounts<- analysis_data %>%
+  filter(str_detect(tweetsample, fixed("IO"))) %>% 
+  pull(screen_name) %>% unique()
 
 io_accounts_meta<- rtweet::lookup_users(users = io_accounts,token = api1_token)
 
@@ -74,7 +97,13 @@ io_accounts_meta_trimmed <- io_accounts_meta %>%  select(name, description, scre
          description = str_remove_all(string = .$description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
 
 
-io_accounts_meta_trimmed %>%kable(caption = "Supranational EU twitter accounts list",col.names =  c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),align = "l")
+io_accounts_meta_trimmed %>%
+  kbl(caption = "International organization twitter accounts list",
+      col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date")) %>%
+ kable_styling(bootstrap_options = c("condensed"),position = "center",html_font = "cambri")
+
+
+write.table(x = io_accounts_meta_trimmed,file = file.path(data_path,"IO_analysis_sample.csv"),sep = ",",col.names = c("Actor Name","Account Description","Twitter Handle","Number of Tweets","Follower Count","Friends Count","Account Creation Date"),row.names = F,quote = T,fileEncoding = "UTF-8")
 
 ```
 
