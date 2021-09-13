@@ -159,6 +159,50 @@ eu$tweetsample <- ifelse(eu$account_type == "Personal Accounts",
 eu$account_type <- NULL
 
 
+# De-select certain accounts
+eu <- eu %>% 
+  filter(screen_name != "Europarl_EN") %>% # Not an executive institution
+  filter(screen_name != "mariofcenteno") # Head of Eurogroup, but primarily PT finance minister and thus nat politician
+
+
+# Export personal EU accounts for inspection / coding
+# personalEU <- eu %>% 
+#   filter(tweetsample == "EU (pers. account)") %>% 
+#   select(screen_name) %>% 
+#   group_by(screen_name) %>% 
+#   summarize(count = n()) %>% 
+#   arrange(desc(count))
+# write.table(personalEU, "./data/EUpersonalAccounts.csv", row.names = F, sep = ";")
+
+
+# Load data with hand-coded start date
+# of executive (!) EU office for all personal accounts 
+officeterm <- read.table("./data/EUpersonalAccounts_OfficeTerms_CR.csv", 
+                         header = T, row.names = F, sep = ";")
+officeterm$startEU <- as.Date(officeterm$startEU)
+
+# Mark tweets from personal accounts 
+# that occurred prior to taking up executive EU office
+
+eu$preEU <- F
+
+for (i in 1:nrow(officeterm)) {
+  eu$preEU <- ifelse(eu$screen_name == officeterm$screen_name[i] & eu$date < officeterm$startEU,
+                        TRUE, FALSE)
+}
+
+
+# Export a copy of personal accounts
+# May allow analyses of whther tweeters shift behaviour when entering EU office
+df <- eu %>% filter(tweetsample == "EU (pers. account)")
+write_rds(df, "./data/PersonalAccounts_Pre-Post-EU.RDS")
+rm(df)
+
+
+# Remove personal tweets issued before taking up EU office
+eu2 <- eu %>% filter(!preEU)
+eu2$preEU <- NULL
+
 
 
 # IO Tweet sample ####

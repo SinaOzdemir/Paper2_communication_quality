@@ -35,6 +35,7 @@ tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "IO (pers. account)"
 tweets$tweetsample[tweets$tweetsample == "IO"] <- "IO (inst. account)"
 rm(iopersonal)
 
+
 # Clean group variables (for plotting)
 tweets$group1 <- tweets$tweetsample %>% 
   str_replace(" ", "\n") %>% ## Add line breaks
@@ -53,7 +54,7 @@ tweets$group2 <- tweets$tweetsample %>%
                     "UK",
                     "IO",
                     "Random")) %>% 
-  fct_rev() # Reverse, so that EU alsways comes out on top
+  fct_rev() # Reverse, so that EU always comes out on top
 
 # Mark group of benchmark samples separately
 tweets$benchmark <- !str_detect(tweets$tweetsample, "EU ")
@@ -142,7 +143,8 @@ benchmarkshapes <- c(18, 19)
 # Couple of things to note here:
 # We want daily output by type and individual (!) account
 # But not all accounts tweet daily (but for averaging we need the zero tweet days as well)
-# In addition, not all accounts existed fro the same date range, we do not want zeos if the account actually dinh't exist that day
+# In addition, not all accounts existed for the same date range, 
+# we do not want zeros if the account actually dind't exist that day
 # Solution: Before aggregating, loop through the individual accounts 
 # and fill the date range between their first and their last tweet in our sample
 
@@ -266,7 +268,9 @@ pl.daily <-
   pl.daily.eu + pl.daily.comp  + 
   plot_layout(widths = c(2, 1))
 
-ggsave("./plots/DescriptiveOverview/DailyTweets.png", plot = pl.daily, width = 20, height = 10, units = "cm")
+ggsave("./plots/PaperR1/DailyTweets.png", plot = pl.daily, width = 20, height = 10, units = "cm")
+ggsave("./plots/PaperR1/DailyTweets.eps", plot = pl.daily, width = 20, height = 10, units = "cm")
+
 
 # IDEAS:
 # Correlate/Scatter daily/monthly n of press releases (Rauh 2021) and legislative output (Rauh 2020)
@@ -329,7 +333,8 @@ pl.urls <-
 pl.media <-
   (pl.photos+pl.videos) / (pl.emojis+pl.urls)+
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes).")
-ggsave("./plots/DescriptiveOverview/MediaUsage.png", plot = pl.media, width = 24, height = 20, units = "cm")
+ggsave("./plots/PaperR1/MediaUsage.png", plot = pl.media, width = 24, height = 20, units = "cm")
+ggsave("./plots/PaperR1/MediaUsage.eps", plot = pl.media, width = 24, height = 20, units = "cm")
 
 
 
@@ -420,7 +425,8 @@ pl.language <-
   (pl.flesch + pl.familiarity + pl.verbal) +
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes) with English-language content.")
   
-ggsave("./plots/DescriptiveOverview/Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
+ggsave("./plots/PaperR1/Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
+ggsave("./plots/PaperR1/Language.eps", plot = pl.language, width = 22, height = 11, units = "cm")
 
 
 # Understandability across actors
@@ -484,7 +490,8 @@ pl.engagement <-
                   theme = theme(plot.title = element_text(hjust = 0.5, 
                                                           size = 14, face = "bold")))
 
-ggsave("./plots/DescriptiveOverview/Engagement.png", width = 20, height = 15, units = "cm")
+ggsave("./plots/PaperR1/Engagement.png", width = 20, height = 15, units = "cm")
+ggsave("./plots/PaperR1/Engagement.eps", width = 20, height = 15, units = "cm")
 
 
 # Multivariate including UK & IO sample (which requires follower counts!)
@@ -643,4 +650,4 @@ ggsave("./plots/DescriptiveOverview/Engagement.png", width = 20, height = 15, un
 #   #                                                         size = 14, face = "bold")))+
 #   plot_layout(widths = c(2.5, 1))
 # 
-# ggsave("./plots/DescriptiveOverview/Output.png", plot = pl.output, width = 30, height = 12, units = "cm")
+# ggsave("./plots/PaperR1/Output.png", plot = pl.output, width = 30, height = 12, units = "cm")
