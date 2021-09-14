@@ -112,7 +112,7 @@ sum(is.na(tweets$ifollowers))
 
 # Normalize user engagement allong follower count ####
 
-tweets$ifollowers[tweets$ifollowers == 0] <- 1 # Prevent infinite reatios, we interpolated from 0
+tweets$ifollowers[tweets$ifollowers == 0] <- 1 # Prevent infinite ratios, we interpolated from 0
 
 tweets$like_ratio <- (tweets$like_count/tweets$ifollowers)*100
 tweets$retweet_ratio <- (tweets$retweet_count/tweets$ifollowers)*100
@@ -166,8 +166,9 @@ pl.followers <-
   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
   scale_y_continuous(breaks = seq(0, 1500000, 100000),label=comma)
 
-ggsave("./plots/UserEngagement/EUfollowersTime.png", plot = pl.followers, width = 24, height = 10, units = "cm")
-  
+ggsave("./plots/PaperR1/Fig4_EUfollowersTime.png", plot = pl.followers, width = 24, height = 10, units = "cm")
+ggsave("./plots/PaperR1/Fig4_EUfollowersTime.eps", plot = pl.followers, width = 24, height = 10, units = "cm", device = cairo_ps)
+
 
 # Followers by account (max)
 
@@ -197,21 +198,21 @@ sum(eusnaps$snapshots == 0)
 
 # The most viral supranational tweets
 
-hist(tweets$enga_ratio[tweets$group2 == "EU"])
-
-viral <- tweets %>% 
-  filter(group2 == "EU") %>% 
-  select(c(id, day, screen_name, ifollowers, enga_ratio, 
-           like_count, like_ratio, retweet_count, retweet_ratio,
-           quote_count, quote_ratio, reply_count, reply_ratio)) %>% 
-  arrange(desc(enga_ratio)) %>% 
-  head(10)
-
-ttexts <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>% 
-  select(id, text) %>% 
-  filter(id %in% viral$id)
-
-viral <- viral %>%  left_join(ttexts, by = "id")
+# hist(tweets$enga_ratio[tweets$group2 == "EU"])
+# 
+# viral <- tweets %>% 
+#   filter(group2 == "EU") %>% 
+#   select(c(id, day, screen_name, ifollowers, enga_ratio, 
+#            like_count, like_ratio, retweet_count, retweet_ratio,
+#            quote_count, quote_ratio, reply_count, reply_ratio)) %>% 
+#   arrange(desc(enga_ratio)) %>% 
+#   head(10)
+# 
+# ttexts <- read_rds("./data/corpii/EU_corpus_cleaned.RDS") %>% 
+#   select(id, text) %>% 
+#   filter(id %in% viral$id)
+# 
+# viral <- viral %>%  left_join(ttexts, by = "id")
 
 # Hmpf ... 'hello world' tweets - entirely driven by underestimating the follower count
 # We need to filter - only when and after snapshots are available
@@ -305,30 +306,31 @@ viral.out <- viral2 %>%
                       "Interpolated<br>followers",
                       "Likes", "Retweets", "Quotes", "Replies", "Engagements"), escape =F) %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
-save_kable(viral.out, "./tables/ViralTweets.html")
+save_kable(viral.out, "./tables/Tab3_ViralTweets.html")
 
 
 
 
 # Aggregate engagement ratio over time
 
-pl.enga.time <- # The plot
-  ggplot(df.enga %>% filter(group2 == "EU" & day >= as.Date("2011-01-01", "%Y-%m-%d")), 
-         aes(x = month, y = enga_ratio/100, group = 1))+
-  # geom_point()+
-  stat_summary(geom = "line", fun = mean, color = "#003399")+
-  # stat_smooth(color = "#003399")+
-  # geom_rug(sides = "b", alpha = .2)+
-  # scale_y_continuous(breaks = seq(0,3.5,0.5))+
-  # coord_cartesian(ylim = c(0, 3.7))+ 
-  scale_x_discrete(breaks = t.breaks, labels = t.labels) +
-  scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
-  labs(title = "Average share of followers engaging with supranational tweets",
-       subtitle = "Sum of likes, retweets, quotes, and replies divided by follower count at time of tweet",
-       x= "", y = "")+
-  theme(axis.text.x = element_text(angle = 90, vjust = .5))
-
-ggsave("./plots/UserEngagement/UserEngagementOverTime.png", plot = pl.enga.time, width = 20, height = 12, units = "cm")
+# pl.enga.time <- # The plot
+#   ggplot(df.enga %>% filter(group2 == "EU" & day >= as.Date("2011-01-01", "%Y-%m-%d")), 
+#          aes(x = month, y = enga_ratio/100, group = 1))+
+#   # geom_point()+
+#   stat_summary(geom = "line", fun = mean, color = "#003399")+
+#   # stat_smooth(color = "#003399")+
+#   # geom_rug(sides = "b", alpha = .2)+
+#   # scale_y_continuous(breaks = seq(0,3.5,0.5))+
+#   # coord_cartesian(ylim = c(0, 3.7))+ 
+#   scale_x_discrete(breaks = t.breaks, labels = t.labels) +
+#   scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))+
+#   labs(title = "Average share of followers engaging with supranational tweets",
+#        subtitle = "Sum of likes, retweets, quotes, and replies divided by follower count at time of tweet",
+#        x= "", y = "")+
+#   theme(axis.text.x = element_text(angle = 90, vjust = .5))
+# 
+# ggsave("./plots/PaperR1/UserEngagementOverTime.png", plot = pl.enga.time, width = 20, height = 12, units = "cm")
+# ggsave("./plots/PaperR1/UserEngagementOverTime.eps", plot = pl.enga.time, width = 20, height = 12, units = "cm", device = cairo_ps)
 
 
 
@@ -385,7 +387,8 @@ pl.reply_ratio <-
 pl.engagement_ratio <-
   (pl.like_ratio+pl.retweet_ratio)/
   (pl.quote_ratio+pl.reply_ratio)
-ggsave("./plots/UserEngagement/UserEngagementCrossSection.png", plot = pl.engagement_ratio, width = 24, height = 16, units = "cm")
+ggsave("./plots/PaperR1/Fig5_UserEngagementCrossSection.png", plot = pl.engagement_ratio, width = 24, height = 16, units = "cm")
+ggsave("./plots/PaperR1/Fig5_UserEngagementCrossSection.eps", plot = pl.engagement_ratio, width = 24, height = 16, units = "cm", device = cairo_ps)
 
 
 # Clean up
@@ -547,8 +550,8 @@ ggplot(coefs, aes(y = name2))+
         axis.text.x = element_text(angle = 0),
         axis.text.y = element_text(face = "bold"))
 
-ggsave("./plots/UserEngagement/OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
-
+ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
+ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.eps", width = 20, height = 15, units = "cm", device = cairo_ps())
 
 
 # Substantial effect sizes
@@ -613,159 +616,8 @@ effect <- (delta * coef$Value[coef$Coefficient == "io"])
 substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
 substantial
 
-
-
-
-
-
-
-
-
-# OLD #####
-
-
-
-
-
-# Targeted data set
-df <- tweets %>% 
-  filter(original) %>% # Only self-authored tweets
-  select(id, screen_name, day, # ID markers for residual analysis
-         like_ratio, retweet_ratio, quote_ratio, reply_ratio, # DVs: engagement rates
-         emojicount, pic, video, url, # IVs: Media
-         nmentions, nhashtags, # IVs: Responsiveness
-         flesch, familiarity, verbal, # IVs: Language 
-         personal) %>% # IV: Personal account
-  mutate_if(is.numeric, list(~na_if(., Inf))) %>% # Replace infinite values with NAs - INSPECT - 8000 cases
-  mutate_if(is.numeric, list(~na_if(., -Inf))) %>% # Mostly cases with interpolated follower count == 0 or n_noun == 0
-  filter(complete.cases(.)) # Keep only complete cases, mainly drops tweets without english content
-
-
-
-
-# Why the heck are hastag and mention counts perfectly correlated???
-# In analytic data set creation i lokks godd (line 28 ff)
-
-
-# # Look at DV distributions
-# dvs <- df %>% select(c(like_ratio, retweet_ratio, quote_ratio, reply_ratio))
-# cors <- round(cor(dvs), 1) # Correlation matrix
-# 
-# png(file="./plots/UserEngagement/EngagementRatioDistributions.png",
-#     width=600, height=600)
-# corrgram(dvs, # Takes some time
-#          main = "Distributions of engagement indicators",
-#          lower.panel=panel.pts, upper.panel=panel.conf,
-#          diag.panel=panel.density)
-# dev.off()
-# 
-# # Ugly ! Extremely skewed and overdispersed - seems to call for Poisson or negative binomial
-# 
-# apply(dvs, 2, mean) # Means
-# apply(dvs, 2, var) # Variances
-# 
-# # Overdispersion (against normal), not dramatic at first sight, but still skew and possible zero-inflation
-
-
-
-# Crudely linear models ####
-
-# Scale numeric variables
-# Want to see standardized coeffcients for a start
-dfs <- df %>% 
-  mutate_at(c("like_ratio", "retweet_ratio", "quote_ratio", "reply_ratio",
-              "emojicount",
-              "nmentions", "nhashtags",
-              "flesch", "familiarity", "verbal", "lsd",
-              "pic", "video", "url", "personal"), # Dummies as well??? To compare effect sizes ...
-            scale)
-mean(dfs$like_ratio) # Sanity check
-sd(dfs$like_ratio) # Sanity check
-
-
-
-# Main Model formula
-regform <- "personal + pic + video + emojicount + url + nmentions + nhashtags + flesch + familiarity + verbal + lsd"
-
-
-# Regressions 
-
-likeform <- paste0("like_ratio ~ ", regform)
-like.fit <- lm(formula = likeform, data = dfs)
-like.coef <- coefplot(like.fit, plot = F) %>% 
-  mutate(Model = "Like ratio")
-
-retweetform <- paste0("retweet_ratio ~ ", regform)
-retweet.fit <- lm(formula = retweetform, data = dfs)
-retweet.coef <- coefplot(retweet.fit, plot = F) %>% 
-  mutate(Model = "Retweet ratio")
-
-quoteform <- paste0("quote_ratio ~ ", regform)
-quote.fit <- lm(formula = quoteform, data = dfs)
-quote.coef <- coefplot(quote.fit, plot = F) %>% 
-  mutate(Model = "Quote ratio")
-
-replyform <- paste0("reply_ratio ~ ", regform)
-reply.fit <- lm(formula = replyform, data = dfs)
-reply.coef <- coefplot(reply.fit, plot = F) %>% 
-  mutate(Model = "Reply ratio")
-
-# Combine and clean coefficient info
-
-coefs <- rbind(like.coef,
-               retweet.coef,
-               quote.coef,
-               reply.coef) %>% 
-  mutate(Coefficient = str_remove(Coefficient, "TRUE"), # Clean Dummy names
-         Coefficient = str_replace_all(Coefficient, fixed("(Intercept)"), "Intercept")) %>% 
-  filter(Coefficient != "Intercept") # Perfectly 0 for full standardization anyway
-
-coefs$Model <- factor(coefs$Model, levels = c("Like ratio", "Retweet ratio", "Reply ratio", "Quote ratio"))
-
-coefs$name <- NA
-coefs$name[coefs$Coefficient == "emojicount"] <- "Number of\nemojis/symbols"
-coefs$name[coefs$Coefficient == "video"] <- "Embedded video"
-coefs$name[coefs$Coefficient == "pic"] <- "Embedded picture"
-coefs$name[coefs$Coefficient == "url"] <- "External link"
-coefs$name[coefs$Coefficient == "nmentions"] <- "Number of\n@user mentions"
-coefs$name[coefs$Coefficient == "nhashtags"] <- "Number of\n#hashtags"
-coefs$name[coefs$Coefficient == "flesch"] <- "Flesch/Kincaid\nreading ease"
-coefs$name[coefs$Coefficient == "familiarity"] <- "Familiarity\nof words"
-coefs$name[coefs$Coefficient == "verbal"] <- "Verbal style"
-coefs$name[coefs$Coefficient == "lsd"] <- "Sentiment\n(Lexicoder)"
-coefs$name[coefs$Coefficient == "personal"] <- "Personal\naccount"
-
-coefs$name2 <- factor(coefs$name, 
-                      levels = c("Number of\n@user mentions", "Number of\n#hashtags", "Number of\nemojis/symbols",
-                                 "Embedded picture", "Embedded video", "External link",
-                                 "Flesch/Kincaid\nreading ease", "Familiarity\nof words", "Verbal style", "Sentiment\n(Lexicoder)",
-                                 "Personal\naccount"))
-
-# Plot results
-
-theme_set(theme_light())
-
-ggplot(coefs, aes(y = name2, color = Model))+
-  geom_vline(xintercept = 0, linetype = "dashed")+
-  geom_linerange(aes(xmin = LowOuter, xmax = HighOuter), size = .5, position = position_dodge(width = .7)) +
-  geom_linerange(aes(xmin = LowInner, xmax = HighInner), size = 1, position = position_dodge(width = .7)) +
-  geom_point(aes(x = Value), position = position_dodge(width = .7))+
-  scale_colour_manual(values = c("red", "green", "blue", "gray30"))+
-  geom_hline(yintercept = c(seq(1.5, 10.5, 1)), color = "gray70")+
-  labs(title = "Linear regression models of user engagement",
-       subtitle = paste("Based on", nrow(dfs), "tweets of\npersonal and institutional accounts of supranational EU actors"),
-       x = "\nStandardized effect",
-       y = "Tweet\ncharacteristics\n",
-       color = "Engagement indicator: ")+
-  theme(legend.position='bottom', 
-        axis.text = element_text(color = "black"),
-        plot.title = element_text(size=14, face = "bold"),
-        panel.grid.minor = element_line(),
-        panel.grid.major.y = element_blank(),
-        axis.text.x = element_text(angle = 0),
-        axis.text.y = element_text(face = "bold"))
-
-ggsave("./plots/UserEngagement/OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
-
-  
-
+# UK account
+delta <- 1/(sds$SD[sds$variable == "uk"])
+effect <- (delta * coef$Value[coef$Coefficient == "uk"])
+substantial <- effect/sds$SD[sds$variable == "enga_ratio"] # In units of DV
+substantial

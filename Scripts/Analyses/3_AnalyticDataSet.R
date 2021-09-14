@@ -172,13 +172,13 @@ eu <- eu %>%
 #   group_by(screen_name) %>% 
 #   summarize(count = n()) %>% 
 #   arrange(desc(count))
-# write.table(personalEU, "./data/EUpersonalAccounts.csv", row.names = F, sep = ";")
+# write.table(personalEU, "./analysis_data/EUpersonalAccounts.csv", row.names = F, sep = ";")
 
 
 # Load data with hand-coded start date
 # of executive (!) EU office for all personal accounts 
-officeterm <- read.table("./data/EUpersonalAccounts_OfficeTerms_CR.csv", 
-                         header = T, row.names = F, sep = ";")
+officeterm <- read.table("./analysis_data/EUpersonalAccounts_OfficeTerms_CR.csv", 
+                         header = T, sep = ";")
 officeterm$startEU <- as.Date(officeterm$startEU)
 
 # Mark tweets from personal accounts 
@@ -187,21 +187,26 @@ officeterm$startEU <- as.Date(officeterm$startEU)
 eu$preEU <- F
 
 for (i in 1:nrow(officeterm)) {
-  eu$preEU <- ifelse(eu$screen_name == officeterm$screen_name[i] & eu$date < officeterm$startEU,
-                        TRUE, FALSE)
+  print(paste(i, officeterm$screen_name[i], officeterm$startEU[i]))
+  print(sum(eu$screen_name == officeterm$screen_name[i] & eu$day < officeterm$startEU[i]))
+  
+  eu$preEU[eu$screen_name == officeterm$screen_name[i] & eu$day < officeterm$startEU[i]] <- T
 }
+
+sum(eu$preEU) # 83277
+# sum(eu$screen_name == "vonderleyen" & eu$day < as.Date("2019-12-01"))
 
 
 # Export a copy of personal accounts
-# May allow analyses of whther tweeters shift behaviour when entering EU office
+# May allow analyses of whether tweeters shift behavior when entering EU office
 df <- eu %>% filter(tweetsample == "EU (pers. account)")
 write_rds(df, "./data/PersonalAccounts_Pre-Post-EU.RDS")
 rm(df)
 
 
 # Remove personal tweets issued before taking up EU office
-eu2 <- eu %>% filter(!preEU)
-eu2$preEU <- NULL
+eu <- eu %>% filter(!preEU)
+eu$preEU <- NULL
 
 
 

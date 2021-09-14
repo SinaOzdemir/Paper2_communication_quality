@@ -268,8 +268,8 @@ pl.daily <-
   pl.daily.eu + pl.daily.comp  + 
   plot_layout(widths = c(2, 1))
 
-ggsave("./plots/PaperR1/DailyTweets.png", plot = pl.daily, width = 20, height = 10, units = "cm")
-ggsave("./plots/PaperR1/DailyTweets.eps", plot = pl.daily, width = 20, height = 10, units = "cm")
+ggsave("./plots/PaperR1/Fig1_DailyTweets.png", plot = pl.daily, width = 20, height = 10, units = "cm")
+ggsave("./plots/PaperR1/Fig1_DailyTweets.eps", plot = pl.daily, width = 20, height = 10, units = "cm", device=cairo_ps)
 
 
 # IDEAS:
@@ -279,7 +279,7 @@ ggsave("./plots/PaperR1/DailyTweets.eps", plot = pl.daily, width = 20, height = 
 
 
 # Media usage ####
-# in orignal (self-authored) tweets only
+# in original (self-authored) tweets only
 
 # Pictures
 pl.photos <-
@@ -333,8 +333,8 @@ pl.urls <-
 pl.media <-
   (pl.photos+pl.videos) / (pl.emojis+pl.urls)+
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes).")
-ggsave("./plots/PaperR1/MediaUsage.png", plot = pl.media, width = 24, height = 20, units = "cm")
-ggsave("./plots/PaperR1/MediaUsage.eps", plot = pl.media, width = 24, height = 20, units = "cm")
+ggsave("./plots/PaperR1/Fig3_MediaUsage.png", plot = pl.media, width = 24, height = 20, units = "cm")
+ggsave("./plots/PaperR1/Fig3_MediaUsage.eps", plot = pl.media, width = 24, height = 20, units = "cm", device=cairo_ps)
 
 
 
@@ -425,8 +425,8 @@ pl.language <-
   (pl.flesch + pl.familiarity + pl.verbal) +
   plot_annotation(caption = "Only original tweets (excluding re-tweets and quotes) with English-language content.")
   
-ggsave("./plots/PaperR1/Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
-ggsave("./plots/PaperR1/Language.eps", plot = pl.language, width = 22, height = 11, units = "cm")
+ggsave("./plots/PaperR1/Fig2_Language.png", plot = pl.language, width = 22, height = 11, units = "cm")
+ggsave("./plots/PaperR1/Fig2_Language.eps", plot = pl.language, width = 22, height = 11, units = "cm", device=cairo_ps)
 
 
 # Understandability across actors
@@ -453,45 +453,45 @@ t.test(euclear$clarity[euclear$personal == 0], euclear$clarity[euclear$personal 
 
 
 
-# Engagement ####
-#################
-
-# Hearts
-pl.favs <-
-  ggplot(df, aes(y = favorite_count, x = month, color = account_type, group = account_type))+
-  # stat_summary(geom = "pointrange", fun.data = "mean_cl_boot") +
-  stat_summary(geom = "line", fun = "mean", na.rm = T)+
-  # geom_point()+
-  scale_x_discrete(breaks = t.breaks, labels = t.labels)+
-  scale_color_manual(values = accountcolors)+
-  labs(title= "Average number of favorites per tweet and month",
-       color = "",
-       x= "", y = "")+
-  theme(legend.position = c(0.2,.88),
-        legend.background = element_blank())
-
-# Retweets
-pl.rets <- 
-  ggplot(df, aes(y = retweet_count, x = month, color = account_type, group = account_type))+
-  # stat_summary(geom = "pointrange", fun.data = "mean_cl_boot") +
-  stat_summary(geom = "line", fun = "mean", na.rm = T)+
-  # geom_point()+
-  scale_x_discrete(breaks = t.breaks, labels = t.labels)+
-  scale_color_manual(values = accountcolors)+
-  labs(title= "Average number of retweets per tweet and month",
-       color = "",
-       x= "", y = "")    
-
-# Combine
-pl.engagement <-
-  pl.favs/pl.rets +
-  plot_annotation(title = "How much do users engage with tweets from supranational actors?",
-                  caption = "Note that both favorite and retweet counts follow an extremely right-skewed distribution\nand are subject to strong individual outliers.",
-                  theme = theme(plot.title = element_text(hjust = 0.5, 
-                                                          size = 14, face = "bold")))
-
-ggsave("./plots/PaperR1/Engagement.png", width = 20, height = 15, units = "cm")
-ggsave("./plots/PaperR1/Engagement.eps", width = 20, height = 15, units = "cm")
+# # Engagement ####
+# #################
+# 
+# # Hearts
+# pl.favs <-
+#   ggplot(tweets, aes(y = like_count, x = month, color = account_type, group = account_type))+
+#   # stat_summary(geom = "pointrange", fun.data = "mean_cl_boot") +
+#   stat_summary(geom = "line", fun = "mean", na.rm = T)+
+#   # geom_point()+
+#   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
+#   scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+#   labs(title= "Average number of favorites per tweet and month",
+#        color = "",
+#        x= "", y = "")+
+#   theme(legend.position = c(0.2,.88),
+#         legend.background = element_blank())
+# 
+# # Retweets
+# pl.rets <- 
+#   ggplot(df, aes(y = retweet_count, x = month, color = account_type, group = account_type))+
+#   # stat_summary(geom = "pointrange", fun.data = "mean_cl_boot") +
+#   stat_summary(geom = "line", fun = "mean", na.rm = T)+
+#   # geom_point()+
+#   scale_x_discrete(breaks = t.breaks, labels = t.labels)+
+#   scale_color_manual(values = c("grey30", "#FFCC00", "darkred", "#003399"))+
+#   labs(title= "Average number of retweets per tweet and month",
+#        color = "",
+#        x= "", y = "")    
+# 
+# # Combine
+# pl.engagement <-
+#   pl.favs/pl.rets +
+#   plot_annotation(title = "How much do users engage with tweets from supranational actors?",
+#                   caption = "Note that both favorite and retweet counts follow an extremely right-skewed distribution\nand are subject to strong individual outliers.",
+#                   theme = theme(plot.title = element_text(hjust = 0.5, 
+#                                                           size = 14, face = "bold")))
+# 
+# ggsave("./plots/PaperR1/Fig5_Engagement.png", width = 20, height = 15, units = "cm")
+# ggsave("./plots/PaperR1/Fig5_Engagement.eps", width = 20, height = 15, units = "cm", device=cairo_ps)
 
 
 # Multivariate including UK & IO sample (which requires follower counts!)
