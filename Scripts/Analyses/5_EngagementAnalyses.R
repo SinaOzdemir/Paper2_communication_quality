@@ -37,8 +37,8 @@ tweets <- tweets %>%
 iopersonal <- read.csv2("./analysis_data/IO_account_coding_CR.csv") %>% 
   filter(personal == 1) 
 iopersonal <- iopersonal[,1] # Screen names to atomic vector
-tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "IO (pers. account)"
-tweets$tweetsample[tweets$tweetsample == "IO"] <- "IO (inst. account)"
+tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "RegOrg (pers. account)"
+tweets$tweetsample[tweets$tweetsample == "IO"] <- "RegOrg (inst. account)"
 rm(iopersonal)
 
 # Clean group variables (for plotting)
@@ -48,8 +48,8 @@ tweets$group1 <- tweets$tweetsample %>%
                     "EU\n(pers. account)",
                     "UK\n(inst. account)",
                     "UK\n(pers. account)",
-                    "IO\n(inst. account)",
-                    "IO\n(pers. account)",
+                    "RegOrg\n(inst. account)",
+                    "RegOrg\n(pers. account)",
                     "Random\nTweets")) %>% 
   fct_rev() # Reverse, so that EU always comes out on top (for horizontal plots, reverse in ggplot call)
 
@@ -57,7 +57,7 @@ tweets$group2 <- tweets$tweetsample %>%
   str_remove(" .*$") %>% # Remove pers/inst distinction (for color coding later)
   factor(levels = c("EU", # Order as factor
                     "UK",
-                    "IO",
+                    "RegOrg",
                     "Random")) %>% 
   fct_rev() # Reverse, so that EU alsways comes out on top
 
@@ -410,7 +410,7 @@ nrow(df.enga %>%  filter(group2 == "EU" & enga_ratio >= 30))
 # Targeted data set
 df <- df.enga %>% 
   filter(original) %>% # Only self-authored tweets
-  mutate(io = group2 == "IO", # Actor dummies, EU as baseline
+  mutate(io = group2 == "RegOrg", # Actor dummies, EU as baseline
          uk = group2 == "UK") %>% 
   mutate(pic = nphotos > 0,
          video = (nvideos+ntube) > 1,
@@ -505,14 +505,14 @@ coefs$name[coefs$Coefficient == "familiarity"] <- "Familiarity\nof words"
 coefs$name[coefs$Coefficient == "verbal"] <- "Verbal style"
 coefs$name[coefs$Coefficient == "lsd"] <- "Sentiment\n(Lexicoder)"
 coefs$name[coefs$Coefficient == "personal"] <- "Personal\naccount"
-coefs$name[coefs$Coefficient == "io"] <- "IO\naccount"
+coefs$name[coefs$Coefficient == "io"] <- "RegOrg\naccount"
 coefs$name[coefs$Coefficient == "uk"] <- "UK\naccount"
 
 coefs$name2 <- factor(coefs$name, 
                       levels = c("Flesch/Kincaid\nreading ease", "Familiarity\nof words", "Verbal style", 
                                  "Embedded picture", "Number of\nemojis/symbols", "Embedded video", "External link",
                                  "Number of\n@user mentions", "Number of\n#hashtags", 
-                                 "Personal\naccount", "UK\naccount", "IO\naccount"))
+                                 "Personal\naccount", "UK\naccount", "RegOrg\naccount"))
 
 coefs$cat <- NA
 coefs$cat[coefs$Coefficient %in% c("flesch", "familiarity", "verbal")] <- "Text"
@@ -550,8 +550,8 @@ ggplot(coefs, aes(y = name2))+
         axis.text.x = element_text(angle = 0),
         axis.text.y = element_text(face = "bold"))
 
-ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.png", width = 20, height = 15, units = "cm")
-ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.eps", width = 20, height = 15, units = "cm", device = cairo_ps())
+ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.png", width = 21, height = 16, units = "cm")
+ggsave("./plots/PaperR1/FigA1_OLS_UserEngagement.eps", width = 21, height = 16, units = "cm", device = cairo_ps())
 
 
 # Substantial effect sizes

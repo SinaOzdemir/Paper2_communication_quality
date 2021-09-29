@@ -31,8 +31,8 @@ tweets <- tweets %>%
 iopersonal <- read.csv2("./analysis_data/IO_account_coding_CR.csv") %>% 
   filter(personal == 1) 
 iopersonal <- iopersonal[,1] # Screen names to atomic vector
-tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "IO (pers. account)"
-tweets$tweetsample[tweets$tweetsample == "IO"] <- "IO (inst. account)"
+tweets$tweetsample[tweets$screen_name %in% iopersonal] <- "RegOrg (pers. account)"
+tweets$tweetsample[tweets$tweetsample == "IO"] <- "RegOrg (inst. account)"
 rm(iopersonal)
 
 
@@ -43,8 +43,8 @@ tweets$group1 <- tweets$tweetsample %>%
                     "EU\n(pers. account)",
                     "UK\n(inst. account)",
                     "UK\n(pers. account)",
-                    "IO\n(inst. account)",
-                    "IO\n(pers. account)",
+                    "RegOrg\n(inst. account)",
+                    "RegOrg\n(pers. account)",
                     "Random\nTweets")) %>% 
   fct_rev() # Reverse, so that EU always comes out on top (for horizontal plots, reverse in ggplot call)
 
@@ -52,7 +52,7 @@ tweets$group2 <- tweets$tweetsample %>%
   str_remove(" .*$") %>% # Remove pers/inst distinction (for color coding later)
   factor(levels = c("EU", # Order as factor
                     "UK",
-                    "IO",
+                    "RegOrg",
                     "Random")) %>% 
   fct_rev() # Reverse, so that EU always comes out on top
 
