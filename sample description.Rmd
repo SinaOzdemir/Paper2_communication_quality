@@ -1,0 +1,62 @@
+---
+title: "analysis data summary table"
+author: "Sina Özdemir"
+date: "9/17/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,message = F)
+library(tidyverse)
+library(gtsummary)
+data<- readRDS(file = "C:/Users/sinaoz/OneDrive - NTNU/Projects/communication_quality_repo/data/AnalyticData_AllSamples.RDS")
+
+```
+
+```{r io_personal}
+
+io_data<- data %>% filter(tweetsample == "IO")
+
+
+io_screennames<- io_data %>% pull(screen_name) %>% unique()
+
+io_indv<- c("JHPedraza","AUBinetaDiop","GuyCyrille","AU_Chergui","NEPAD_Mayaki","AUC_MoussaFaki","AmbFMadeira")
+
+
+io_data$tweetsample<- ifelse(io_data$screen_name%in%io_indv,"IO (pers. account)","IO (inst. account)")
+
+data<- anti_join(data, io_data, by = "screen_name")
+
+data <- rbind(data,io_data)
+
+```
+
+
+```{r descriptive_table}
+
+
+data$pers<- grepl(pattern = "(pers. account)",x = data$tweetsample,fixed = T)
+data$pers<- ifelse(data$pers == T, "Personal account","Institutional Account")
+
+data$sample<- ifelse(str_detect(data$tweetsample,"EU"),"EU",
+                     ifelse(str_detect(data$tweetsample,"IO"),"IO",
+                            ifelse(str_detect(data$tweetsample,"Random"),"Random tweets",
+                                   ifelse(str_detect(data$tweetsample,"UK"),"UK","Unidentified"))))
+
+
+data %>% select(pers,sample) %>% tbl_summary(by = pers)
+```
+
+```{r account_type_summary}
+data %>%
+  select(screen_name,pers,sample) %>%
+  distinct(screen_name,.keep_all = T) %>%
+  filter(sample != "Random tweets") %>%
+  select(-screen_name) %>% 
+  tbl_summary(by = pers)
+
+
+```
+
+
+
