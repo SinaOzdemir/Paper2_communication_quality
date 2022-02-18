@@ -9,12 +9,12 @@ case_selection<- as.integer(readline(prompt = "Which case should I work on? \n 1
 case<- cases[case_selection]
 
 #for twitter api
-bearer_token <- "AAAAAAAAAAAAAAAAAAAAANh3NgEAAAAAYpb57mP0saX5D%2BCi4vfCvf%2FWp6Q%3DD6xFxcFGBkLGz0BWs6f4EylxpdxEeLIpLk867py48blqPVwQUm"
-api_v1_token <- rtweet::create_token(app = "Functionised_collector",
-                                    consumer_key = "c0wODdFRKzNDz23l7O9A6GBig",
-                                    consumer_secret = "uwraekdxEX2BaVZSNLw7sjkVbq3wNRByYYiOolHrYaikqZHKUW",
-                                    access_token = "1151438784384421888-eas7PxAdeoohUCykI5XeX2Wc2lppjl",
-                                    access_secret = "96TaBIVuZXlpICK2QAP7IurCFuYPfHSUbXYUTTSRak3gr",
+bearer_token <- ""
+api_v1_token <- rtweet::create_token(app = "",
+                                    consumer_key = "",
+                                    consumer_secret = "",
+                                    access_token = "",
+                                    access_secret = "",
                                     set_renv = F)
 
 
