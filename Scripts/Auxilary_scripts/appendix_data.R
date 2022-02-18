@@ -3,7 +3,8 @@ lapply(packs,library, character.only = T)
 
 data_path<- here("data")
 
-analysis_data<- readRDS(file = file.path(data_path,"corpii","AnalyticData_AllSamples.RDS"))
+# analysis_data<- readRDS(file = file.path(data_path,"corpii","AnalyticData_AllSamples.RDS"))
+analysis_data<- readRDS(file = file.path(data_path, "AnalyticData_AllSamples.RDS"))
 
 eu_accounts<- analysis_data %>%
   filter(str_detect(tweetsample, fixed("EU "))) %>% 
@@ -38,10 +39,11 @@ list.files(path = file.path(data_path,"EU","rds_clean"),
          user_created_at) %>% distinct() %>% 
   mutate(user_username = paste0("@",.$user_username),
          user_name = str_remove_all(string = .$user_name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
-         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]")) %>% 
+         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         user_description = str_replace_all(string = .$user_description,pattern = "\\n", " ")) %>% 
   write.table(x = .,
-              file = file.path(data_path,"EU_analysis_sample.csv"),
-              sep = ",",
+              file = file.path(data_path,"EU_analysis_sample.tsv"),
+              sep = "\t",
               col.names = c("Actor Name",
                             "Account Description",
                             "Handle",
@@ -72,14 +74,15 @@ uk_actor<-readRDS(uk_data_list[i]) %>%
          user_created_at) %>% distinct() %>% 
   mutate(user_username = paste0("@",.$user_username),
          user_name = str_remove_all(string = .$user_name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
-         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"))
+         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         user_description = str_replace_all(string = .$user_description,pattern = "\\n", " "))
   
 uk_appendix<-rbind(uk_appendix,uk_actor)
 }
 
 write.table(x = uk_appendix,
-            file = file.path(data_path,"uk_analysis_sample.csv"),
-            sep = ",",
+            file = file.path(data_path,"uk_analysis_sample.tsv"),
+            sep = "\t",
             col.names = c("Actor Name",
                           "Account Description",
                           "Handle",
@@ -105,10 +108,11 @@ list.files(path = file.path(data_path,"IO","rds_clean"),
          user_created_at) %>% distinct() %>% 
   mutate(user_username = paste0("@",.$user_username),
          user_name = str_remove_all(string = .$user_name,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
-         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]")) %>% 
+         user_description = str_remove_all(string = .$user_description,pattern = "[\U{1F300}-\U{1F64F}]|[\U{1F300}-\U{1F5FF}]|[\U{1F900}-\U{1F9FF}]|[\U{2700}-\U{27BF}]|[\U{1F100}-\U{1F1FF}]|[\U{2600}-\U{26FF}]"),
+         user_description = str_replace_all(string = .$user_description,pattern = "\\n", " ")) %>% 
   write.table(x = .,
-              file = file.path(data_path,"IO_analysis_sample.csv"),
-              sep = ",",
+              file = file.path(data_path,"IO_analysis_sample.tsv"),
+              sep = "\t",
               col.names = c("Actor Name",
                             "Account Description",
                             "Handle",
